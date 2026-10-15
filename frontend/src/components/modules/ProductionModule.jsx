@@ -179,34 +179,49 @@ export default function ProductionModule() {
     <div className="space-y-6">
       {/* Sub Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60">
           <button
             onClick={() => setSubTab('lsx')}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition ${
-              subTab === 'lsx' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+            className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              subTab === 'lsx'
+                ? 'bg-white text-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            Lệnh Sản Xuất LSX ({orders.length})
+            <span>Lệnh Sản Xuất LSX</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${subTab === 'lsx' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'}`}>
+              {orders.length}
+            </span>
           </button>
           <button
             onClick={() => setSubTab('wip')}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition ${
-              subTab === 'wip' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+            className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              subTab === 'wip'
+                ? 'bg-white text-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            Luân Chuyển BTP & Lỗi NG ({movements.length})
+            <span>Luân Chuyển BTP & NG</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${subTab === 'wip' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'}`}>
+              {movements.length}
+            </span>
           </button>
           <button
             onClick={() => setSubTab('subcontract')}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition ${
-              subTab === 'subcontract' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+            className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              subTab === 'subcontract'
+                ? 'bg-white text-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            Gia Công Ngoài / Subcontracting ({subcontracts.length})
+            <span>Gia Công Ngoài</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${subTab === 'subcontract' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'}`}>
+              {subcontracts.length}
+            </span>
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {subTab === 'lsx' && (
             <Button size="md" icon={Plus} onClick={() => setIsLsxModalOpen(true)}>
               Tạo LSX mới

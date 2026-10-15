@@ -217,40 +217,49 @@ export default function SalesModule() {
     <div className="space-y-6">
       {/* Sub Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60">
           <button
             onClick={() => setActiveSubTab('quotations')}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition ${
+            className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
               activeSubTab === 'quotations'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-white text-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            Báo giá CNC ({quotations.length})
+            <span>Báo giá CNC</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${activeSubTab === 'quotations' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'}`}>
+              {quotations.length}
+            </span>
           </button>
           <button
             onClick={() => setActiveSubTab('orders')}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition ${
+            className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
               activeSubTab === 'orders'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-white text-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            Đơn hàng SO ({orders.length})
+            <span>Đơn hàng SO</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${activeSubTab === 'orders' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'}`}>
+              {orders.length}
+            </span>
           </button>
           <button
             onClick={() => setActiveSubTab('deliveries')}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition ${
+            className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
               activeSubTab === 'deliveries'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-white text-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            Phiếu Giao Hàng ({deliveries.length})
+            <span>Phiếu Giao Hàng</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${activeSubTab === 'deliveries' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'}`}>
+              {deliveries.length}
+            </span>
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {activeSubTab === 'quotations' && (
             <Button
               onClick={() => setIsQuotationModalOpen(true)}

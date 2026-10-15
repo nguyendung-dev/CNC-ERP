@@ -188,34 +188,49 @@ export default function FinanceModule() {
     <div className="space-y-6">
       {/* Sub Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60">
           <button
             onClick={() => setSubTab('advances')}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition ${
-              subTab === 'advances' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+            className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              subTab === 'advances'
+                ? 'bg-white text-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            Đề Nghị Tạm Ứng ({advances.length})
+            <span>Đề Nghị Tạm Ứng</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${subTab === 'advances' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'}`}>
+              {advances.length}
+            </span>
           </button>
           <button
             onClick={() => setSubTab('payments')}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition ${
-              subTab === 'payments' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+            className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              subTab === 'payments'
+                ? 'bg-white text-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            Đề Nghị Thanh Toán ({payments.length})
+            <span>Đề Nghị Thanh Toán</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${subTab === 'payments' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'}`}>
+              {payments.length}
+            </span>
           </button>
           <button
             onClick={() => setSubTab('debts')}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition ${
-              subTab === 'debts' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+            className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              subTab === 'debts'
+                ? 'bg-white text-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            Sổ Quản Lý Công Nợ ({debts.length})
+            <span>Sổ Quản Lý Công Nợ</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${subTab === 'debts' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'}`}>
+              {debts.length}
+            </span>
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {subTab === 'advances' && (
             <Button size="md" icon={Plus} onClick={() => setIsAdvanceModalOpen(true)}>
               Tạo phiếu tạm ứng
