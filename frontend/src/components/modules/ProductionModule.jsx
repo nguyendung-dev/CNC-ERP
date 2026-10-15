@@ -208,17 +208,17 @@ export default function ProductionModule() {
 
         <div className="flex items-center gap-2">
           {subTab === 'lsx' && (
-            <Button size="sm" icon={Plus} onClick={() => setIsLsxModalOpen(true)}>
+            <Button size="md" icon={Plus} onClick={() => setIsLsxModalOpen(true)}>
               Tạo LSX mới
             </Button>
           )}
           {subTab === 'wip' && (
-            <Button size="sm" icon={Workflow} onClick={() => setIsWipModalOpen(true)}>
+            <Button size="md" icon={Workflow} onClick={() => setIsWipModalOpen(true)}>
               Phiếu chuyển công đoạn
             </Button>
           )}
           {subTab === 'subcontract' && (
-            <Button size="sm" icon={Truck} onClick={() => setIsSubModalOpen(true)}>
+            <Button size="md" icon={Truck} onClick={() => setIsSubModalOpen(true)}>
               Gửi gia công ngoài
             </Button>
           )}

@@ -369,24 +369,6 @@ export default function DashboardPage() {
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-6">
-          {/* Subheader Breadcrumb */}
-          <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                QUẢN TRỊ DOANH NGHIỆP CƠ KHÍ CHẾ TẠO CNC
-              </p>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
-                {activeNav === 'home' && 'Tổng quan Điều hành CNC-ERP'}
-                {activeNav === 'sales' && 'Quản lý Bán Hàng & Báo Giá Cơ Khí'}
-                {activeNav === 'inventory' && 'Quản lý Kho Hàng & Quy Cách Phôi'}
-                {activeNav === 'production' && 'Quản lý Sản Xuất & Gia Công Ngoài'}
-                {activeNav === 'finance' && 'Quản lý Tài Chính & Dòng Tiền'}
-                {activeNav === 'reports' && 'Báo Cáo & Phân Tích Quản Trị'}
-                {activeNav === 'settings' && 'Tùy Chỉnh & Phân Quyền Vai Trò'}
-              </h1>
-            </div>
-          </div>
-
           {/* Module Views */}
           {activeNav === 'sales' && <SalesModule />}
           {activeNav === 'inventory' && <InventoryModule />}

@@ -16,6 +16,7 @@ import api from '../../api';
 import Table from '../ui/Table';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
+import ExportButton from '../ui/ExportButton';
 import Modal from '../ui/Modal';
 import { Input } from '../ui/Input';
 import * as XLSX from 'xlsx';
@@ -255,19 +256,14 @@ export default function SalesModule() {
               onClick={() => setIsQuotationModalOpen(true)}
               icon={Plus}
               variant="primary"
-              size="sm"
+              size="md"
             >
               Lập báo giá mới
             </Button>
           )}
-          <Button
-            onClick={exportSalesExcel}
-            icon={Download}
-            variant="outline"
-            size="sm"
-          >
+          <ExportButton onClick={exportSalesExcel}>
             Xuất Excel
-          </Button>
+          </ExportButton>
         </div>
       </div>
 

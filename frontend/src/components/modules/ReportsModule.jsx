@@ -15,6 +15,7 @@ import {
 import api from '../../api';
 import StatCard from '../ui/StatCard';
 import Button from '../ui/Button';
+import ExportButton from '../ui/ExportButton';
 import * as XLSX from 'xlsx';
 
 export default function ReportsModule() {
@@ -78,14 +79,9 @@ export default function ReportsModule() {
           </p>
         </div>
 
-        <Button
-          onClick={handleExportFullReport}
-          icon={Download}
-          variant="success"
-          size="sm"
-        >
+        <ExportButton onClick={handleExportFullReport}>
           Xuất Báo Cáo Excel Quản Trị (XLSX)
-        </Button>
+        </ExportButton>
       </div>
 
       {/* Grid of Key Stat Cards */}

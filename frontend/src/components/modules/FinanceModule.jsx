@@ -217,17 +217,17 @@ export default function FinanceModule() {
 
         <div className="flex items-center gap-2">
           {subTab === 'advances' && (
-            <Button size="sm" icon={Plus} onClick={() => setIsAdvanceModalOpen(true)}>
+            <Button size="md" icon={Plus} onClick={() => setIsAdvanceModalOpen(true)}>
               Tạo phiếu tạm ứng
             </Button>
           )}
           {subTab === 'payments' && (
-            <Button size="sm" icon={Plus} onClick={() => setIsPaymentModalOpen(true)}>
+            <Button size="md" icon={Plus} onClick={() => setIsPaymentModalOpen(true)}>
               Lập phiếu thanh toán
             </Button>
           )}
           {subTab === 'debts' && (
-            <Button size="sm" icon={Plus} onClick={() => setIsDebtModalOpen(true)}>
+            <Button size="md" icon={Plus} onClick={() => setIsDebtModalOpen(true)}>
               Tạo công nợ mới
             </Button>
           )}

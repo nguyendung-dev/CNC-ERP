@@ -16,6 +16,7 @@ import api from '../../api';
 import Table from '../ui/Table';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
+import ExportButton from '../ui/ExportButton';
 import Modal from '../ui/Modal';
 import { Input, Select } from '../ui/Input';
 import * as XLSX from 'xlsx';
@@ -260,18 +261,13 @@ export default function InventoryModule() {
             onClick={() => setIsAddModalOpen(true)}
             icon={Plus}
             variant="primary"
-            size="sm"
+            size="md"
           >
             Thêm vật tư
           </Button>
-          <Button
-            onClick={exportExcel}
-            icon={Download}
-            variant="outline"
-            size="sm"
-          >
-            Xuất Excel tồn kho
-          </Button>
+          <ExportButton onClick={exportExcel}>
+            Xuất Excel tồn kho (XLSX)
+          </ExportButton>
         </div>
       </div>
 
