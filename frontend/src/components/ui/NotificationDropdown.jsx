@@ -10,60 +10,15 @@ import {
   Factory, 
   Clock, 
   ChevronRight, 
-  Trash2 
+  Trash2,
+  RefreshCw
 } from 'lucide-react';
-
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 1,
-    title: 'Cảnh báo tồn kho thiếu (MRP)',
-    message: 'Dao phay ngón Endmill D6 x 50L tồn kho dưới mức tối thiểu (còn 4/10 cái).',
-    type: 'inventory',
-    time: '5 phút trước',
-    unread: true,
-    targetNav: 'inventory',
-  },
-  {
-    id: 2,
-    title: 'Đề nghị tạm ứng chờ phê duyệt',
-    message: 'Trưởng xưởng đề nghị tạm ứng 4,250,000đ mua phôi nhôm 6061 gấp cho đơn hàng Alpha Tech.',
-    type: 'finance',
-    time: '25 phút trước',
-    unread: true,
-    targetNav: 'finance',
-  },
-  {
-    id: 3,
-    title: 'Gia công ngoài đến hạn giao trả',
-    message: 'Xưởng Anode Kim Phát hẹn giao trả 70 chi tiết Gối đỡ vòng bi hôm nay.',
-    type: 'production',
-    time: '1 giờ trước',
-    unread: true,
-    targetNav: 'production',
-  },
-  {
-    id: 4,
-    title: 'Tiến độ Đơn hàng SO-2026-001',
-    message: 'Đã hoàn thành xuất kho đợt 1 (40/100 sản phẩm) kèm chứng chỉ CMM kiểm tra kích thước.',
-    type: 'sales',
-    time: '2 giờ trước',
-    unread: true,
-    targetNav: 'sales',
-  },
-  {
-    id: 5,
-    title: 'Báo cáo kiểm tra chất lượng QC',
-    message: 'Ghi nhận 2 sản phẩm phế phẩm NG tại máy Tiện Doosan do sai dung sai trục Z.',
-    type: 'production',
-    time: 'Hôm qua',
-    unread: false,
-    targetNav: 'production',
-  },
-];
+import api from '../../api';
 
 export default function NotificationDropdown({ onSelectModule }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('all'); // 'all' | 'unread' | 'inventory'
   const dropdownRef = useRef(null);
 
@@ -81,6 +36,97 @@ export default function NotificationDropdown({ onSelectModule }) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
+
+  // Fetch real notifications from database
+  const loadNotifications = async () => {
+    setLoading(true);
+    try {
+      const [lowStockRes, advancesRes, quotesRes, subRes] = await Promise.allSettled([
+        api.get('/inventory/materials/alerts/low-stock'),
+        api.get('/finance/advances'),
+        api.get('/sales/quotations'),
+        api.get('/production/subcontracting'),
+      ]);
+
+      const items = [];
+
+      // 1. Cảnh báo tồn kho dưới định mức an toàn (MySQL: materials table)
+      if (lowStockRes.status === 'fulfilled' && Array.isArray(lowStockRes.value?.data)) {
+        lowStockRes.value.data.forEach((m) => {
+          items.push({
+            id: `stock-${m.id}`,
+            title: 'Cảnh báo tồn kho thiếu (MRP)',
+            message: `Vật tư "${m.name}" (${m.code}) hiện còn ${m.quantity} / mức tối thiểu ${m.min_stock} ${m.unit || 'cái'}.`,
+            type: 'inventory',
+            time: 'Hiện tại',
+            unread: true,
+            targetNav: 'inventory',
+          });
+        });
+      }
+
+      // 2. Đề nghị tạm ứng chờ phê duyệt (MySQL: advances table status = pending)
+      if (advancesRes.status === 'fulfilled' && Array.isArray(advancesRes.value?.data)) {
+        advancesRes.value.data
+          .filter((a) => a.status === 'pending')
+          .forEach((a) => {
+            items.push({
+              id: `advance-${a.id}`,
+              title: 'Đề nghị tạm ứng chờ duyệt',
+              message: `${a.requester || 'Nhân viên'} đề nghị tạm ứng ${Number(a.amount).toLocaleString()}đ cho "${a.purpose}".`,
+              type: 'finance',
+              time: a.created_at ? new Date(a.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'Vừa xong',
+              unread: true,
+              targetNav: 'finance',
+            });
+          });
+      }
+
+      // 3. Báo giá CNC chờ phê duyệt (MySQL: quotations table status = pending)
+      if (quotesRes.status === 'fulfilled' && Array.isArray(quotesRes.value?.data)) {
+        quotesRes.value.data
+          .filter((q) => q.status === 'pending')
+          .forEach((q) => {
+            items.push({
+              id: `quote-${q.id}`,
+              title: 'Báo giá CNC chờ gửi khách',
+              message: `Báo giá ${q.code} - Khách "${q.customer_name}" (${q.part_name}) trị giá ${Number(q.total_amount).toLocaleString()}đ.`,
+              type: 'sales',
+              time: q.created_at ? new Date(q.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'Vừa xong',
+              unread: true,
+              targetNav: 'sales',
+            });
+          });
+      }
+
+      // 4. Gia công ngoài đang tiến hành (MySQL: subcontracting_orders status = sent)
+      if (subRes.status === 'fulfilled' && Array.isArray(subRes.value?.data)) {
+        subRes.value.data
+          .filter((s) => s.status === 'sent')
+          .forEach((s) => {
+            items.push({
+              id: `sub-${s.id}`,
+              title: 'Gia công ngoài đang thực hiện',
+              message: `Đơn gia công ${s.code} tại "${s.partner_name}" hẹn giao trả ${s.promise_date ? new Date(s.promise_date).toLocaleDateString('vi-VN') : 'sớm nhất'}.`,
+              type: 'production',
+              time: 'Đang theo dõi',
+              unread: false,
+              targetNav: 'production',
+            });
+          });
+      }
+
+      setNotifications(items);
+    } catch (err) {
+      console.error('Failed to load notifications from database:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
 
   const unreadCount = notifications.filter((n) => n.unread).length;
 
@@ -132,48 +178,64 @@ export default function NotificationDropdown({ onSelectModule }) {
     <div className="relative" ref={dropdownRef}>
       {/* Bell Button with Badge */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) loadNotifications();
+        }}
         title="Thông báo xưởng"
-        className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition focus:outline-none"
+        className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition focus:outline-none cursor-pointer"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 min-w-4 h-4 px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-xs animate-in zoom-in duration-150">
-            {unreadCount}
+          <span className="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+            {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
-      {/* Dropdown Popover */}
+      {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
           {/* Header */}
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-sm text-slate-900">Thông báo xưởng & đơn hàng</span>
-              {unreadCount > 0 && (
-                <span className="text-[10px] font-semibold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">
+              <h3 className="font-bold text-sm text-slate-900">Thông báo xưởng & đơn hàng</h3>
+              {unreadCount > 0 ? (
+                <span className="px-2 py-0.5 text-[10px] font-bold bg-rose-50 text-rose-600 rounded-full border border-rose-200">
                   {unreadCount} mới
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-600 rounded-full border border-emerald-200">
+                  0 mới
                 </span>
               )}
             </div>
-
-            {unreadCount > 0 && (
+            <div className="flex items-center gap-2">
               <button
-                onClick={markAllAsRead}
-                className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition"
+                onClick={loadNotifications}
+                disabled={loading}
+                className="p-1 text-slate-400 hover:text-blue-600 rounded transition cursor-pointer"
+                title="Làm mới"
               >
-                <CheckCheck className="w-3.5 h-3.5" />
-                Đã đọc tất cả
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-blue-600' : ''}`} />
               </button>
-            )}
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                >
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  Đã đọc tất cả
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Filter Pills */}
-          <div className="px-4 py-2 flex items-center gap-1.5 border-b border-slate-100 text-xs">
+          <div className="px-4 py-2 border-b border-slate-100 flex items-center gap-1.5 text-xs bg-white">
             <button
               onClick={() => setFilter('all')}
-              className={`px-2.5 py-1 rounded-lg font-medium transition ${
+              className={`px-2.5 py-1 rounded-lg font-medium transition cursor-pointer ${
                 filter === 'all'
                   ? 'bg-slate-900 text-white'
                   : 'text-slate-600 hover:bg-slate-100'
@@ -183,7 +245,7 @@ export default function NotificationDropdown({ onSelectModule }) {
             </button>
             <button
               onClick={() => setFilter('unread')}
-              className={`px-2.5 py-1 rounded-lg font-medium transition ${
+              className={`px-2.5 py-1 rounded-lg font-medium transition cursor-pointer ${
                 filter === 'unread'
                   ? 'bg-slate-900 text-white'
                   : 'text-slate-600 hover:bg-slate-100'
@@ -193,7 +255,7 @@ export default function NotificationDropdown({ onSelectModule }) {
             </button>
             <button
               onClick={() => setFilter('inventory')}
-              className={`px-2.5 py-1 rounded-lg font-medium transition ${
+              className={`px-2.5 py-1 rounded-lg font-medium transition cursor-pointer ${
                 filter === 'inventory'
                   ? 'bg-slate-900 text-white'
                   : 'text-slate-600 hover:bg-slate-100'
@@ -205,9 +267,14 @@ export default function NotificationDropdown({ onSelectModule }) {
 
           {/* Notifications List */}
           <div className="max-h-[360px] overflow-y-auto divide-y divide-slate-100">
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div className="py-8 text-center text-xs text-slate-400 flex flex-col items-center gap-2">
+                <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+                Đang kiểm tra dữ liệu thực tế từ MySQL...
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-400">
-                Không có thông báo nào
+                Không có thông báo mới (Dữ liệu thời gian thực từ MySQL)
               </div>
             ) : (
               filtered.map((item) => (
@@ -240,7 +307,7 @@ export default function NotificationDropdown({ onSelectModule }) {
                       </span>
                       <button
                         onClick={(e) => deleteNotification(item.id, e)}
-                        className="text-slate-400 hover:text-rose-500 p-1 rounded transition"
+                        className="text-slate-400 hover:text-rose-500 p-1 rounded transition cursor-pointer"
                         title="Xóa thông báo"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -254,8 +321,8 @@ export default function NotificationDropdown({ onSelectModule }) {
 
           {/* Footer */}
           <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 text-center">
-            <span className="text-xs font-medium text-slate-500">
-              Đồng bộ dữ liệu xưởng thời gian thực
+            <span className="text-[11px] font-medium text-slate-500">
+              Đồng bộ dữ liệu thời gian thực từ MySQL Database
             </span>
           </div>
         </div>

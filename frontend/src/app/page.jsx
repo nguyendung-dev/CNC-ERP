@@ -155,21 +155,6 @@ export default function DashboardPage() {
           });
         });
 
-      // Default sample CNC task if empty
-      if (tasks.length === 0) {
-        tasks.push({
-          id: 901,
-          category: 'Tạm ứng mua phôi / gia công',
-          tagColor: 'bg-amber-50 text-amber-700 border-amber-200',
-          title: 'Đề nghị tạm ứng mua 5 cây phôi Nhôm 6061 Phi 50mm khẩn cấp',
-          requester: 'Nguyễn Văn Tuấn (Trưởng xưởng)',
-          time: '08:30',
-          date: '15/10/2026',
-          amount: '4,250,000 đ',
-          actionType: 'advance',
-        });
-      }
-
       setPendingTasks(tasks);
       setActiveOrders(orders);
     } catch (err) {
