@@ -24,14 +24,29 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3001';
 // CORS Configuration
 const corsOptions = {
   origin: (origin, callback) => {
+    // Allow non-browser requests (mobile, postman, curl)
     if (!origin) return callback(null, true);
-    const allowedOrigins = [
-      CLIENT_URL,
+
+    const clientUrls = (process.env.CLIENT_URL || '')
+      .split(',')
+      .map((url) => url.trim().replace(/\/$/, ''))
+      .filter(Boolean);
+
+    const defaultAllowed = [
       'http://localhost:3001',
       'http://127.0.0.1:3001',
       'http://localhost:3000',
+      'http://127.0.0.1:3000',
     ];
-    if (allowedOrigins.includes(origin)) {
+
+    const allowedOrigins = [...new Set([...clientUrls, ...defaultAllowed])];
+
+    if (
+      process.env.CLIENT_URL === '*' ||
+      allowedOrigins.includes(origin) ||
+      origin.startsWith('http://localhost:') ||
+      origin.startsWith('http://127.0.0.1:')
+    ) {
       return callback(null, true);
     }
     return callback(new Error(`Origin ${origin} not allowed by CORS`));
