@@ -64,6 +64,18 @@ export default function ProductionModule({ initialSubTab }) {
   const [salesOrders, setSalesOrders] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Steps state (Thêm, sửa, xóa, cắt bỏ công đoạn)
+  const [cncSteps, setCncSteps] = useState([]);
+  const [isAddStepOpen, setIsAddStepOpen] = useState(false);
+  const [isEditStepOpen, setIsEditStepOpen] = useState(false);
+  const [selectedStep, setSelectedStep] = useState(null);
+  const [stepForm, setStepForm] = useState({
+    step_order: 1,
+    name: '',
+    assigned_role: '',
+    description: '',
+  });
+
   // Workshop modals & forms
   const [isAddWorkshopOpen, setIsAddWorkshopOpen] = useState(false);
   const [isEditWorkshopOpen, setIsEditWorkshopOpen] = useState(false);
@@ -136,18 +148,31 @@ export default function ProductionModule({ initialSubTab }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [resLsx, resWip, resSub, resWs, resSo] = await Promise.all([
+      const [resLsx, resWip, resSub, resWs, resSo, resSteps] = await Promise.all([
         api.get('/production/orders'),
         api.get('/production/wip-movements'),
         api.get('/production/subcontracting'),
         api.get('/workshops').catch(() => ({ data: [] })),
         api.get('/sales/orders').catch(() => ({ data: [] })),
+        api.get('/production/steps').catch(() => ({ data: [] })),
       ]);
       setOrders(resLsx.data || []);
       setMovements(resWip.data || []);
       setSubcontracts(resSub.data || []);
       setWorkshops(resWs.data?.data || resWs.data || []);
       setSalesOrders(resSo?.data?.data || resSo?.data || []);
+      const fetchedSteps = resSteps.data?.data || resSteps.data || [];
+      setCncSteps(
+        Array.isArray(fetchedSteps) && fetchedSteps.length > 0
+          ? fetchedSteps
+          : STANDARD_CNC_STEPS.map((step, i) => ({
+              id: i + 1,
+              step_order: i + 1,
+              name: step.value,
+              assigned_role: step.role,
+              description: step.label,
+            }))
+      );
     } catch (err) {
       console.error('Failed to load production data:', err);
     } finally {
