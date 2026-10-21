@@ -113,7 +113,13 @@ class AuthService {
       err.status = 404;
       throw err;
     }
-    return await authRepo.update(id, data);
+    const updatePayload = { ...data };
+    if (updatePayload.password && String(updatePayload.password).trim() !== '') {
+      updatePayload.password = await bcrypt.hash(String(updatePayload.password).trim(), 10);
+    } else {
+      delete updatePayload.password;
+    }
+    return await authRepo.update(id, updatePayload);
   }
 
   async deleteUser(id, currentUserId) {

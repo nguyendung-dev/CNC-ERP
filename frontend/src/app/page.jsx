@@ -32,10 +32,13 @@ import {
   FileText,
   DollarSign,
   Pencil,
-  Trash2
+  Trash2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 // Layout Shared Components
 import AppHeader from '../components/layout/AppHeader';
@@ -52,6 +55,7 @@ import ReportsModule from '../components/modules/ReportsModule';
 
 export default function DashboardPage() {
   const { user, token, isLoading, logout, ROLE_LABELS } = useAuth();
+  const { showSuccess, showError, confirmDelete } = useToast();
   const router = useRouter();
 
   // Authentication Guard: require login before entering dashboard
@@ -82,6 +86,7 @@ export default function DashboardPage() {
     full_name: '',
     username: '',
     email: '',
+    phone: '',
     password: '',
     role: 'sales',
   });
@@ -183,7 +188,7 @@ export default function DashboardPage() {
     if (task.actionType === 'advance') {
       try {
         await api.patch(`/finance/advances/${task.id}/approve`);
-        alert('Đã phê duyệt đề nghị tạm ứng thành công!');
+        showSuccess('Phê duyệt thành công', 'Phiếu đề nghị tạm ứng đã được phê duyệt hợp lệ.');
         loadData();
       } catch (err) {
         alert(`Lỗi: ${err.message}`);
@@ -204,7 +209,7 @@ export default function DashboardPage() {
 
   const handleReject = (task) => {
     setPendingTasks(pendingTasks.filter((t) => t.id !== task.id));
-    alert('Đã từ chối công việc.');
+    showSuccess('Từ chối công việc', 'Nhiệm vụ đã được cập nhật trạng thái từ chối.');
   };
 
   const fetchUsers = async () => {
@@ -273,6 +278,8 @@ export default function DashboardPage() {
   const [editingUser, setEditingUser] = useState(null);
   const [editUserForm, setEditUserForm] = useState({ full_name: '', role: 'sales' });
   const [editUserSaving, setEditUserSaving] = useState(false);
+  const [showEditPassword, setShowEditPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
 
   const handleOpenEditUser = (u) => {
     setEditingUser(u);
@@ -709,6 +716,7 @@ export default function DashboardPage() {
                     isOpen={!!editingUser}
                     onClose={() => setEditingUser(null)}
                     title={`Chỉnh Sửa Tài Khoản: @${editingUser.username}`}
+                    maxWidth="max-w-md"
                     footer={
                       <div className="flex items-center justify-end gap-2 w-full">
                         <button
@@ -729,7 +737,7 @@ export default function DashboardPage() {
                       </div>
                     }
                   >
-                    <form onSubmit={handleSaveEditUser} className="space-y-4">
+                    <form onSubmit={handleSaveEditUser} className="space-y-3.5">
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Họ và tên nhân viên <span className="text-rose-500">*</span>
@@ -737,27 +745,95 @@ export default function DashboardPage() {
                         <input
                           type="text"
                           required
-                          value={editUserForm.full_name}
+                          value={editUserForm.full_name || ''}
                           onChange={(e) => setEditUserForm({ ...editUserForm, full_name: e.target.value })}
                           className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50"
                         />
                       </div>
 
-                      <div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Số điện thoại
+                          </label>
+                          <input
+                            type="tel"
+                            value={editUserForm.phone || ''}
+                            onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value })}
+                            placeholder="VD: 0987654321"
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Email công việc <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="email"
+                            required
+                            value={editUserForm.email || ''}
+                            onChange={(e) => setEditUserForm({ ...editUserForm, email: e.target.value })}
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Phân quyền vai trò <span className="text-rose-500">*</span>
+                          </label>
+                          <select
+                            value={editUserForm.role || 'sales'}
+                            onChange={(e) => setEditUserForm({ ...editUserForm, role: e.target.value })}
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+                          >
+                            <option value="sales">Kinh doanh (Sales)</option>
+                            <option value="production">Sản xuất (Production)</option>
+                            <option value="warehouse">Kho vật tư (Warehouse)</option>
+                            <option value="accountant">Kế toán (Accountant)</option>
+                            <option value="admin">Quản trị viên (Admin)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Trạng thái tài khoản <span className="text-rose-500">*</span>
+                          </label>
+                          <select
+                            value={editUserForm.status || 'active'}
+                            onChange={(e) => setEditUserForm({ ...editUserForm, status: e.target.value })}
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+                          >
+                            <option value="active">Hoạt động (Active)</option>
+                            <option value="inactive">Tạm khóa (Inactive)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100">
                         <label className="block text-xs font-semibold text-slate-700 mb-1">
-                          Phân quyền vai trò (Role) <span className="text-rose-500">*</span>
+                          Đặt lại mật khẩu mới (Reset Password)
                         </label>
-                        <select
-                          value={editUserForm.role}
-                          onChange={(e) => setEditUserForm({ ...editUserForm, role: e.target.value })}
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-                        >
-                          <option value="sales">Kinh doanh (Sales) - Báo giá, đơn hàng SO</option>
-                          <option value="production">Sản xuất (Production) - Lập LSX, điều độ máy</option>
-                          <option value="warehouse">Kho vật tư (Warehouse) - Quản lý phôi, dao cụ</option>
-                          <option value="accountant">Kế toán (Accountant) - Tạm ứng, thanh toán, công nợ</option>
-                          <option value="admin">Quản trị viên (Admin) - Toàn quyền hệ thống</option>
-                        </select>
+                        <div className="relative">
+                          <input
+                            type={showEditPassword ? 'text' : 'password'}
+                            value={editUserForm.password || ''}
+                            onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })}
+                            placeholder="Để trống nếu giữ nguyên mật khẩu cũ"
+                            className="w-full pl-3 pr-10 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowEditPassword(!showEditPassword)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer p-1"
+                            title={showEditPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                          >
+                            {showEditPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Chỉ nhập khi cần cấp lại mật khẩu mới cho nhân viên.
+                        </p>
                       </div>
                     </form>
                   </Modal>

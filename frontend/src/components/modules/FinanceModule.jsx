@@ -17,8 +17,10 @@ import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import { Input, Select } from '../ui/Input';
+import { useToast } from '../../context/ToastContext';
 
 export default function FinanceModule() {
+  const { showSuccess, showError, confirmDelete } = useToast();
   const [subTab, setSubTab] = useState('advances'); // 'advances' | 'payments' | 'debts'
   const [advances, setAdvances] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -82,7 +84,7 @@ export default function FinanceModule() {
       setIsAdvanceModalOpen(false);
       setAdvanceForm({ requester: '', purpose: '', amount: 1000000 });
       loadData();
-      alert('Tạo đề nghị tạm ứng thành công!');
+      showSuccess('Tạo tạm ứng thành công', `Đề nghị tạm ứng cho ${advanceForm.requester} đã được tạo.`);
     } catch (err) {
       alert(`Lỗi: ${err.message}`);
     }
@@ -92,7 +94,7 @@ export default function FinanceModule() {
     try {
       await api.patch(`/finance/advances/${id}/approve`);
       loadData();
-      alert('Đã duyệt phiếu tạm ứng!');
+      showSuccess('Phê duyệt thành công', 'Phiếu tạm ứng đã được phê duyệt hợp lệ.');
     } catch (err) {
       alert(`Lỗi: ${err.message}`);
     }
@@ -166,7 +168,7 @@ export default function FinanceModule() {
         due_date: '',
       });
       loadData();
-      alert('Tạo hồ sơ công nợ thành công!');
+      showSuccess('Lưu công nợ thành công', `Hồ sơ công nợ của ${debtForm.partner_name} đã được cập nhật.`);
     } catch (err) {
       alert(`Lỗi: ${err.message}`);
     }

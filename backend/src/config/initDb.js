@@ -14,13 +14,23 @@ async function initializeDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(100) UNIQUE NOT NULL,
         email VARCHAR(150) UNIQUE NOT NULL,
+        phone VARCHAR(50) DEFAULT '',
         password VARCHAR(255) NOT NULL,
         full_name VARCHAR(150) NOT NULL,
         role VARCHAR(50) NOT NULL DEFAULT 'sales',
+        status VARCHAR(50) NOT NULL DEFAULT 'active',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    
+    // Ensure phone and status columns exist in users table
+    try {
+      await pool.query("ALTER TABLE users ADD COLUMN phone VARCHAR(50) DEFAULT '' AFTER email;");
+    } catch (e) {}
+    try {
+      await pool.query("ALTER TABLE users ADD COLUMN status VARCHAR(50) DEFAULT 'active' AFTER role;");
+    } catch (e) {}
     // 1. Materials Table (Kho vật tư, phôi, dao cụ cơ khí)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS materials (

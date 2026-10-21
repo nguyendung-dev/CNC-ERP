@@ -1,16 +1,18 @@
 'use client';
 
+import { t } from '../i18n';
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api, { setToken, clearToken, getToken } from '../api';
 
 const AuthContext = createContext(null);
 
 export const ROLE_LABELS = {
-  admin: 'Quản trị viên',
-  sales: 'Kinh doanh & Bán hàng',
-  production: 'Quản đốc Sản xuất CNC',
-  warehouse: 'Thủ kho Phôi & Dao cụ',
-  accountant: 'Kế toán Trưởng',
+  admin: t('auth.roles.admin', 'Quản trị viên'),
+  sales: t('auth.roles.sales', 'Kinh doanh & Bán hàng'),
+  production: t('auth.roles.production', 'Quản đốc Sản xuất CNC'),
+  warehouse: t('auth.roles.warehouse', 'Thủ kho Phôi & Dao cụ'),
+  accountant: t('auth.roles.accountant', 'Kế toán Trưởng'),
 };
 
 export const QUICK_ACCOUNTS = [
@@ -100,6 +102,14 @@ export function AuthProvider({ children }) {
     return await login(email, '123456');
   };
 
+  const updateCurrentUser = (updatedUserData) => {
+    setUser((prev) => {
+      const updated = { ...prev, ...updatedUserData };
+      localStorage.setItem('cnc_erp_user', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const logout = () => {
     setUser(null);
     setTokenState(null);
@@ -118,6 +128,7 @@ export function AuthProvider({ children }) {
         logout,
         quickLogin,
         ROLE_LABELS,
+        updateCurrentUser,
       }}
     >
       {children}

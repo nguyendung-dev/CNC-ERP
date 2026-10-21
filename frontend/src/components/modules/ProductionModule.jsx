@@ -18,8 +18,10 @@ import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import { Input, Select } from '../ui/Input';
+import { useToast } from '../../context/ToastContext';
 
 export default function ProductionModule() {
+  const { showSuccess, showError, confirmDelete } = useToast();
   const [subTab, setSubTab] = useState('lsx'); // 'lsx' | 'wip' | 'subcontract'
   const [orders, setOrders] = useState([]);
   const [movements, setMovements] = useState([]);
@@ -152,9 +154,9 @@ export default function ProductionModule() {
         current_step: 'Cắt phôi',
       });
       loadData();
-      alert('Tạo Lệnh sản xuất (LSX) thành công!');
+      showSuccess('Tạo LSX thành công', `Lệnh sản xuất ${lsxForm.code || ''} cho chi tiết ${lsxForm.part_name} đã được khởi tạo.`);
     } catch (err) {
-      alert(`Lỗi: ${err.message}`);
+      showError('Lỗi tạo LSX', err.message);
     }
   };
 
@@ -164,7 +166,7 @@ export default function ProductionModule() {
       await api.post('/production/wip-movements', wipForm);
       setIsWipModalOpen(false);
       loadData();
-      alert('Lập phiếu chuyển công đoạn và ghi nhận đạt/lỗi (NG) thành công!');
+      showSuccess('Luân chuyển BTP thành công', 'Phiếu chuyển công đoạn và kiểm tra NG đã được lưu.');
     } catch (err) {
       alert(`Lỗi: ${err.message}`);
     }
@@ -176,7 +178,7 @@ export default function ProductionModule() {
       await api.post('/production/subcontracting', subForm);
       setIsSubModalOpen(false);
       loadData();
-      alert('Lập phiếu gửi gia công ngoài thành công!');
+      showSuccess('Gửi gia công ngoài thành công', `Đã lập phiếu gửi gia công chi tiết ${subForm.part_name} tới ${subForm.vendor_name}.`);
     } catch (err) {
       alert(`Lỗi: ${err.message}`);
     }
@@ -192,7 +194,7 @@ export default function ProductionModule() {
         qc_passed_qty: Number(qty),
       });
       loadData();
-      alert('Cập nhật nhận hàng gia công ngoài thành công!');
+      showSuccess('Nhận hàng gia công thành công', 'Đã cập nhật số lượng nhập kho QC đạt chuẩn.');
     } catch (err) {
       alert(`Lỗi: ${err.message}`);
     }

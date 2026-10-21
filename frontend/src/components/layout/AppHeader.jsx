@@ -1,5 +1,7 @@
 'use client';
 
+import { t } from '../../i18n';
+
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -15,9 +17,17 @@ import {
   Factory, 
   CreditCard,
   Loader2,
-  FileText
+  FileText,
+  Pencil,
+  Lock,
+  Phone,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import NotificationDropdown from '../ui/NotificationDropdown';
+import Modal from '../ui/Modal';
+import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../api';
 
 /**
@@ -44,7 +54,64 @@ export default function AppHeader({
 }) {
   const router = useRouter();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const userMenuRef = useRef(null);
+  const { updateCurrentUser } = useAuth();
+  const { showSuccess, showError } = useToast();
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    full_name: '',
+    phone: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [showProfilePassword, setShowProfilePassword] = useState(false);
+  const [showProfileConfirmPassword, setShowProfileConfirmPassword] = useState(false);
+
+  const handleOpenProfileModal = () => {
+    setIsEditingProfile(false);
+    setProfileForm({
+      full_name: user?.full_name || '',
+      phone: user?.phone || '',
+      email: user?.email || '',
+      password: '',
+      confirmPassword: '',
+    });
+    setIsProfileModalOpen(true);
+    setIsUserMenuOpen(false);
+  };
+
+  const handleSaveProfile = async (e) => {
+    if (e) e.preventDefault();
+    if (profileForm.password && profileForm.password !== profileForm.confirmPassword) {
+      showError(t('auth.password_mismatch'));
+      return;
+    }
+    setIsSavingProfile(true);
+    try {
+      const payload = {
+        full_name: profileForm.full_name,
+        phone: profileForm.phone,
+        email: profileForm.email,
+      };
+      if (profileForm.password && profileForm.password.trim() !== '') {
+        payload.password = profileForm.password.trim();
+      }
+      const res = await api.put(`/auth/users/${user.id}`, payload);
+      if (updateCurrentUser && res?.data) {
+        updateCurrentUser(res.data);
+      }
+      showSuccess(t('auth.update_profile_success'));
+      setIsEditingProfile(false);
+      setProfileForm((prev) => ({ ...prev, password: '', confirmPassword: '' }));
+    } catch (err) {
+      showError(err.response?.data?.message || err.message || 'Cập nhật thất bại');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   // Global Code Search States
   const [searchQuery, setSearchQuery] = useState('');
@@ -345,14 +412,14 @@ export default function AppHeader({
                   </div>
 
                   <div className="py-1">
-                    <Link
-                      href="/login"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 transition"
+                    <button
+                      type="button"
+                      onClick={handleOpenProfileModal}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 transition text-left cursor-pointer"
                     >
                       <User className="w-4 h-4 text-slate-400" />
-                      Đổi tài khoản / Đăng nhập
-                    </Link>
+                      Hồ sơ cá nhân
+                    </button>
 
                     <button
                       onClick={() => {
@@ -363,7 +430,7 @@ export default function AppHeader({
                       className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50 transition text-left cursor-pointer font-semibold"
                     >
                       <LogOut className="w-4 h-4 text-rose-500" />
-                      Đăng xuất khỏi hệ thống
+                      {t('auth.logout')}
                     </button>
                   </div>
                 </div>
@@ -384,6 +451,185 @@ export default function AppHeader({
           </div>
         </div>
       </div>
+
+      {/* Profile Modal */}
+      <Modal
+        isOpen={isProfileModalOpen}
+        onClose={() => {
+          setIsProfileModalOpen(false);
+          setIsEditingProfile(false);
+        }}
+        title={isEditingProfile ? 'Chỉnh Sửa Hồ Sơ Cá Nhân' : t('auth.profile_title')}
+        maxWidth="max-w-md"
+        footer={
+          isEditingProfile ? (
+            <div className="flex items-center justify-end gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => setIsEditingProfile(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveProfile}
+                disabled={isSavingProfile}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
+              >
+                {isSavingProfile ? t('common.saving') : t('common.save')}
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between w-full">
+              <button
+                type="button"
+                onClick={() => setIsEditingProfile(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                {t('auth.edit_profile_btn')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsProfileModalOpen(false)}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl transition cursor-pointer"
+              >
+                {t('common.close')}
+              </button>
+            </div>
+          )
+        }
+      >
+        {isEditingProfile ? (
+          <form onSubmit={handleSaveProfile} className="space-y-3.5">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                {t('auth.full_name')} <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={profileForm.full_name || ''}
+                onChange={(e) => setProfileForm({ ...profileForm, full_name: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                {t('auth.phone')}
+              </label>
+              <input
+                type="tel"
+                value={profileForm.phone || ''}
+                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                placeholder="VD: 0987654321"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                {t('auth.work_email')} <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="email"
+                required
+                value={profileForm.email || ''}
+                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50"
+              />
+            </div>
+
+            <div className="pt-2 border-t border-slate-100">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                {t('auth.new_password')}
+              </label>
+              <div className="relative">
+                <input
+                  type={showProfilePassword ? 'text' : 'password'}
+                  value={profileForm.password || ''}
+                  onChange={(e) => setProfileForm({ ...profileForm, password: e.target.value })}
+                  placeholder={t('auth.password_placeholder_leave_empty')}
+                  className="w-full pl-3 pr-10 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowProfilePassword(!showProfilePassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer p-1"
+                  title={showProfilePassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                >
+                  {showProfilePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {profileForm.password && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  {t('auth.confirm_password')} <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showProfileConfirmPassword ? 'text' : 'password'}
+                    required
+                    value={profileForm.confirmPassword || ''}
+                    onChange={(e) => setProfileForm({ ...profileForm, confirmPassword: e.target.value })}
+                    placeholder="Nhập lại mật khẩu mới"
+                    className="w-full pl-3 pr-10 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowProfileConfirmPassword(!showProfileConfirmPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer p-1"
+                    title={showProfileConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  >
+                    {showProfileConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            )}
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-xl flex items-center justify-center shadow-md">
+                {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 text-base">{user?.full_name || 'Người Dùng'}</h4>
+                <p className="text-xs text-slate-500 font-mono">@{user?.username || 'user'}</p>
+                <span className="inline-block mt-1.5 px-2.5 py-0.5 text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded-full">
+                  {roleLabels[user?.role] || user?.role || 'Nhân viên'}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 text-xs">
+              <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                <span className="text-slate-500">{t('auth.work_email')}</span>
+                <span className="font-semibold text-slate-800 font-mono">{user?.email || 'N/A'}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                <span className="text-slate-500">{t('auth.phone')}</span>
+                <span className="font-semibold text-slate-800 font-mono">{user?.phone || 'Chưa cập nhật'}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                <span className="text-slate-500">{t('auth.staff_id')}</span>
+                <span className="font-semibold text-slate-800 font-mono">#{user?.id || 1}</span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-slate-500">{t('auth.account_status')}</span>
+                <span className="inline-flex items-center gap-1.5 font-bold text-emerald-600">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  Đang hoạt động (Active)
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </header>
   );
 }

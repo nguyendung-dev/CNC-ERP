@@ -19,9 +19,11 @@ import Button from '../ui/Button';
 import ExportButton from '../ui/ExportButton';
 import Modal from '../ui/Modal';
 import { Input, Select } from '../ui/Input';
+import { useToast } from '../../context/ToastContext';
 import * as XLSX from 'xlsx';
 
 export default function SalesModule() {
+  const { showSuccess, showError, confirmDelete } = useToast();
   const [activeSubTab, setActiveSubTab] = useState('quotations'); // 'quotations' | 'orders' | 'deliveries'
   const [quotations, setQuotations] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -192,7 +194,7 @@ export default function SalesModule() {
       await api.post('/sales/delivery-notes', deliveryForm);
       setIsDeliveryModalOpen(false);
       loadData();
-      alert('Tạo phiếu xuất kho giao hàng thành công!');
+      showSuccess('Xuất kho thành công', 'Phiếu xuất kho giao hàng đã được tạo thành công.');
     } catch (err) {
       alert(`Lỗi: ${err.message}`);
     }

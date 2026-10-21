@@ -19,9 +19,11 @@ import Button from '../ui/Button';
 import ExportButton from '../ui/ExportButton';
 import Modal from '../ui/Modal';
 import { Input, Select } from '../ui/Input';
+import { useToast } from '../../context/ToastContext';
 import * as XLSX from 'xlsx';
 
 export default function InventoryModule() {
+  const { showSuccess, showError, confirmDelete } = useToast();
   const [materials, setMaterials] = useState([]);
   const [lowStockList, setLowStockList] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -113,7 +115,7 @@ export default function InventoryModule() {
       await api.post(`/inventory/materials/${selectedMaterial.id}/adjust-stock`, stockChange);
       setIsStockModalOpen(false);
       loadData();
-      alert('Cập nhật tồn kho thành công!');
+      showSuccess('Điều chỉnh kho thành công', 'Số lượng tồn kho thực tế đã được cập nhật.');
     } catch (err) {
       alert(`Lỗi: ${err.message}`);
     }
@@ -152,7 +154,7 @@ export default function InventoryModule() {
       await api.put(`/inventory/materials/${editMaterialId}`, editForm);
       setIsEditModalOpen(false);
       loadData();
-      alert('Cập nhật thông tin vật tư thành công!');
+      showSuccess('Cập nhật thành công', `Thông tin vật tư ${editForm.name} đã được cập nhật.`);
     } catch (err) {
       alert(`Lỗi: ${err.message}`);
     }
