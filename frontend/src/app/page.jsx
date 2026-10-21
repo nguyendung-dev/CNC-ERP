@@ -541,6 +541,11 @@ export default function DashboardPage() {
           label: t('nav.sub_production_workshops', 'Phân Xưởng CNC'),
           desc: t('nav.sub_production_workshops_desc', 'Thêm, sửa, xóa quy mô xưởng & dàn máy'),
         },
+        {
+          id: 'operators',
+          label: 'Quản Lý Thợ Máy CNC',
+          desc: 'Danh sách thợ đứng máy, bậc thợ & phân công xưởng',
+        },
       ],
     },
     {

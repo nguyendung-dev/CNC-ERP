@@ -63,6 +63,36 @@ export default function ProductionModule({ initialSubTab }) {
   const [workshops, setWorkshops] = useState([]);
   const [salesOrders, setSalesOrders] = useState([]);
   const [partsList, setPartsList] = useState([]);
+  const [operators, setOperators] = useState([]);
+  const [selectedWorkshopForDetail, setSelectedWorkshopForDetail] = useState(null);
+  const [isWorkshopDetailOpen, setIsWorkshopDetailOpen] = useState(false);
+  const [isOperatorModalOpen, setIsOperatorModalOpen] = useState(false);
+  const [isEditOperatorModalOpen, setIsEditOperatorModalOpen] = useState(false);
+  const [operatorSearch, setOperatorSearch] = useState('');
+  const [operatorFilterWs, setOperatorFilterWs] = useState('all');
+
+  const [operatorForm, setOperatorForm] = useState({
+    code: '',
+    name: '',
+    phone: '',
+    workshop_id: '',
+    skill_level: 'Thợ bậc 4/7 - Vận hành Phay CNC',
+    shift: 'Ca 1 (Hành chính)',
+    status: 'active',
+    notes: '',
+  });
+
+  const [editOperatorForm, setEditOperatorForm] = useState({
+    id: null,
+    code: '',
+    name: '',
+    phone: '',
+    workshop_id: '',
+    skill_level: '',
+    shift: 'Ca 1 (Hành chính)',
+    status: 'active',
+    notes: '',
+  });
   const [loading, setLoading] = useState(false);
 
   // Steps state (Thêm, sửa, xóa, cắt bỏ công đoạn)
@@ -1584,6 +1614,479 @@ export default function ProductionModule({ initialSubTab }) {
           </form>
         </Modal>
       )}
+    
+      {/* ========================================================================= */}
+      {/* OPERATORS SUB-TAB: QUẢN LÝ THỢ MÁY CNC TOÀN XƯỞNG                         */}
+      {/* ========================================================================= */}
+      {subTab === 'operators' && (
+        <div className="space-y-4">
+          {/* Filter & Search Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">Lọc theo phân xưởng:</span>
+              <select
+                value={operatorFilterWs}
+                onChange={(e) => setOperatorFilterWs(e.target.value)}
+                className="text-xs sm:text-sm px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                <option value="all">Tất cả phân xưởng ({operators.length} thợ)</option>
+                {workshops.map((w) => (
+                  <option key={w.id} value={String(w.id)}>
+                    {w.code} - {w.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="w-full sm:w-72">
+              <input
+                type="text"
+                placeholder="Tìm thợ theo tên, mã thợ, kỹ năng..."
+                value={operatorSearch}
+                onChange={(e) => setOperatorSearch(e.target.value)}
+                className="w-full text-xs sm:text-sm px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+          </div>
+
+          {/* Operators Table */}
+          <Table
+            isLoading={loading}
+            data={operators
+              .filter((op) => {
+                if (operatorFilterWs !== 'all' && String(op.workshop_id) !== operatorFilterWs) return false;
+                if (operatorSearch.trim()) {
+                  const s = operatorSearch.toLowerCase();
+                  return (
+                    op.name?.toLowerCase().includes(s) ||
+                    op.code?.toLowerCase().includes(s) ||
+                    op.skill_level?.toLowerCase().includes(s) ||
+                    op.phone?.includes(s) ||
+                    op.workshop_name?.toLowerCase().includes(s)
+                  );
+                }
+                return true;
+              })}
+            emptyMessage="Chưa có thợ máy nào phù hợp tiêu chí lọc. Bấm 'Thêm Thợ Máy CNC' để tạo mới."
+            columns={[
+              {
+                header: 'Mã Thợ',
+                accessor: 'code',
+                cellClassName: 'font-mono font-bold text-blue-600',
+              },
+              {
+                header: 'Họ và Tên Thợ Máy',
+                render: (op) => (
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs">
+                      {op.name ? op.name.slice(0, 1) : 'T'}
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-800 text-xs sm:text-sm">{op.name}</div>
+                      {op.phone && <div className="text-[11px] text-slate-400 font-mono">{op.phone}</div>}
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                header: 'Phân Xưởng Trực Thuộc',
+                render: (op) => {
+                  const ws = workshops.find((w) => w.id === op.workshop_id);
+                  return (
+                    <div>
+                      {ws ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                          <Building2 className="w-3 h-3" />
+                          <span>{ws.code} - {ws.name.split('(')[0].trim()}</span>
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">Chưa phân xưởng</span>
+                      )}
+                    </div>
+                  );
+                },
+              },
+              {
+                header: 'Bậc Thợ & Tay Nghề Đứng Máy',
+                render: (op) => (
+                  <div className="text-xs">
+                    <div className="font-semibold text-slate-800">{op.skill_level || 'Thợ đứng máy CNC'}</div>
+                    {op.notes && <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{op.notes}</div>}
+                  </div>
+                ),
+              },
+              {
+                header: 'Ca Làm Việc',
+                render: (op) => (
+                  <span className="text-xs font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                    {op.shift || 'Ca 1 (Hành chính)'}
+                  </span>
+                ),
+              },
+              {
+                header: 'Trạng Thái',
+                render: (op) => (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                    op.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                  }`}>
+                    {op.status === 'active' ? '● Sẵn sàng đứng máy' : 'Tạm vắng / Nghỉ'}
+                  </span>
+                ),
+              },
+              {
+                header: 'Thao Tác',
+                render: (op) => (
+                  <div className="flex items-center gap-1.5">
+                    {canManageProduction && (
+                      <>
+                        <button
+                          onClick={() => handleOpenEditOperator(op)}
+                          className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                          title="Sửa thông tin thợ"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteOperator(op)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                          title="Xóa hồ sơ thợ"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ),
+              },
+            ]}
+          />
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: CHI TIẾT PHÂN XƯỞNG & DANH SÁCH THỢ MÁY CỦA XƯỞNG                   */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={isWorkshopDetailOpen}
+        onClose={() => setIsWorkshopDetailOpen(false)}
+        title={selectedWorkshopForDetail ? `Chi Tiết ${selectedWorkshopForDetail.code} - ${selectedWorkshopForDetail.name}` : 'Chi Tiết Phân Xưởng'}
+        size="lg"
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Plus}
+              onClick={() => {
+                if (selectedWorkshopForDetail) {
+                  handleOpenCreateOperator(String(selectedWorkshopForDetail.id));
+                }
+              }}
+            >
+              + Thêm Thợ Vào Xưởng Này
+            </Button>
+            <Button variant="ghost" onClick={() => setIsWorkshopDetailOpen(false)}>
+              Đóng
+            </Button>
+          </div>
+        }
+      >
+        {selectedWorkshopForDetail && (
+          <div className="space-y-6">
+            {/* Workshop Quick Overview Card */}
+            <div className="bg-gradient-to-r from-blue-50/60 to-slate-50 p-4 rounded-2xl border border-blue-100 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs sm:text-sm">
+              <div>
+                <span className="text-slate-500 block text-[11px]">Quản Đốc / Trưởng Ca:</span>
+                <span className="font-bold text-slate-800">{selectedWorkshopForDetail.manager_name || 'Chưa chỉ định'}</span>
+                {selectedWorkshopForDetail.phone && (
+                  <span className="block text-slate-500 font-mono text-xs">{selectedWorkshopForDetail.phone}</span>
+                )}
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[11px]">Vị Trí Mặt Bằng:</span>
+                <span className="font-semibold text-slate-800">{selectedWorkshopForDetail.location || 'Khu xưởng'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[11px]">Quy Mô Máy Móc:</span>
+                <span className="font-bold text-blue-700">{selectedWorkshopForDetail.machine_count || 1} máy CNC</span>
+              </div>
+              <div className="sm:col-span-3 pt-2 border-t border-blue-100/60">
+                <span className="text-slate-500 block text-[11px]">Dàn Thiết Bị & Máy Móc Chính:</span>
+                <span className="font-medium text-slate-700">{selectedWorkshopForDetail.main_machines || 'Chưa cập nhật'}</span>
+              </div>
+            </div>
+
+            {/* Operators of this workshop */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-blue-600" />
+                  <h4 className="text-sm font-bold text-slate-900">
+                    Đội Ngũ Thợ Máy Trực Thuộc ({operators.filter((op) => op.workshop_id === selectedWorkshopForDetail.id).length} Thợ)
+                  </h4>
+                </div>
+              </div>
+
+              {operators.filter((op) => op.workshop_id === selectedWorkshopForDetail.id).length === 0 ? (
+                <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                  <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-xs text-slate-500">Chưa có thợ máy nào được phân công vào xưởng này.</p>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="mt-3"
+                    icon={Plus}
+                    onClick={() => handleOpenCreateOperator(String(selectedWorkshopForDetail.id))}
+                  >
+                    Thêm thợ đầu tiên vào xưởng
+                  </Button>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
+                  {operators
+                    .filter((op) => op.workshop_id === selectedWorkshopForDetail.id)
+                    .map((op) => (
+                      <div key={op.id} className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 transition">
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm shrink-0">
+                            {op.name ? op.name.slice(0, 1) : 'T'}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900 text-sm">{op.name}</span>
+                              <span className="text-[11px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{op.code}</span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                                op.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600'
+                              }`}>
+                                {op.status === 'active' ? 'Hoạt động' : 'Tạm vắng'}
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-600 mt-1 font-medium">
+                              🎯 {op.skill_level}
+                            </div>
+                            <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-1">
+                              {op.phone && <span>📞 {op.phone}</span>}
+                              <span>⏰ {op.shift || 'Ca 1'}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 self-end sm:self-center">
+                          <button
+                            onClick={() => handleOpenEditOperator(op)}
+                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                            title="Chỉnh sửa thợ"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteOperator(op)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                            title="Xóa thợ"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: THÊM THỢ MÁY CNC MỚI                                               */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={isOperatorModalOpen}
+        onClose={() => setIsOperatorModalOpen(false)}
+        title="Thêm Thợ Máy CNC Mới Vào Xưởng"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsOperatorModalOpen(false)}>
+              Hủy
+            </Button>
+            <Button variant="primary" onClick={handleSaveOperator} icon={Plus}>
+              Lưu Thợ Máy
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSaveOperator} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Mã Thợ"
+              placeholder="VD: THO-011"
+              value={operatorForm.code}
+              onChange={(e) => setOperatorForm({ ...operatorForm, code: e.target.value })}
+              required
+            />
+            <Input
+              label="Họ và Tên Thợ Máy"
+              placeholder="VD: Nguyễn Văn Nam"
+              value={operatorForm.name}
+              onChange={(e) => setOperatorForm({ ...operatorForm, name: e.target.value })}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Số Điện Thoại"
+              placeholder="VD: 0912..."
+              value={operatorForm.phone}
+              onChange={(e) => setOperatorForm({ ...operatorForm, phone: e.target.value })}
+            />
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Phân Xưởng Trực Thuộc
+              </label>
+              <select
+                value={operatorForm.workshop_id}
+                onChange={(e) => setOperatorForm({ ...operatorForm, workshop_id: e.target.value })}
+                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+              >
+                <option value="">-- Chưa gán phân xưởng --</option>
+                {workshops.map((w) => (
+                  <option key={w.id} value={String(w.id)}>
+                    {w.code} - {w.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <Input
+            label="Bậc Thợ & Tay Nghề Đứng Máy"
+            placeholder="VD: Thợ bậc 5/7 - Đứng máy Phay CNC 4 trục"
+            value={operatorForm.skill_level}
+            onChange={(e) => setOperatorForm({ ...operatorForm, skill_level: e.target.value })}
+            required
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Select
+              label="Ca Làm Việc"
+              value={operatorForm.shift}
+              onChange={(e) => setOperatorForm({ ...operatorForm, shift: e.target.value })}
+              options={[
+                { value: 'Ca 1 (Hành chính)', label: 'Ca 1 (Hành chính: 08:00 - 17:00)' },
+                { value: 'Ca 2 (Chiều/Đêm)', label: 'Ca 2 (Chiều/Đêm: 17:00 - 01:00)' },
+                { value: 'Ca 3 (Đêm)', label: 'Ca 3 (Đêm: 01:00 - 08:00)' },
+                { value: 'Xoay ca luân phiên', label: 'Xoay ca luân phiên' },
+              ]}
+            />
+            <Select
+              label="Trạng Thái"
+              value={operatorForm.status}
+              onChange={(e) => setOperatorForm({ ...operatorForm, status: e.target.value })}
+              options={[
+                { value: 'active', label: 'Hoạt động / Sẵn sàng đứng máy' },
+                { value: 'busy', label: 'Đang chạy đơn hàng gấp' },
+                { value: 'leave', label: 'Nghỉ phép / Tạm vắng' },
+              ]}
+            />
+          </div>
+          <Input
+            label="Ghi chú kinh nghiệm / Dòng máy chuyên trách"
+            placeholder="VD: Kinh nghiệm 5 năm Mastercam, rà gá chuẩn xác..."
+            value={operatorForm.notes}
+            onChange={(e) => setOperatorForm({ ...operatorForm, notes: e.target.value })}
+          />
+        </form>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: CHỈNH SỬA HỒ SƠ THỢ MÁY CNC                                        */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={isEditOperatorModalOpen}
+        onClose={() => setIsEditOperatorModalOpen(false)}
+        title="Chỉnh Sửa Hồ Sơ Thợ Máy CNC"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsEditOperatorModalOpen(false)}>
+              Hủy
+            </Button>
+            <Button variant="primary" onClick={handleUpdateOperator} icon={Pencil}>
+              Cập Nhật Thợ Máy
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleUpdateOperator} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Mã Thợ"
+              value={editOperatorForm.code}
+              onChange={(e) => setEditOperatorForm({ ...editOperatorForm, code: e.target.value })}
+              required
+            />
+            <Input
+              label="Họ và Tên Thợ Máy"
+              value={editOperatorForm.name}
+              onChange={(e) => setEditOperatorForm({ ...editOperatorForm, name: e.target.value })}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Số Điện Thoại"
+              value={editOperatorForm.phone}
+              onChange={(e) => setEditOperatorForm({ ...editOperatorForm, phone: e.target.value })}
+            />
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Phân Xưởng Trực Thuộc
+              </label>
+              <select
+                value={editOperatorForm.workshop_id}
+                onChange={(e) => setEditOperatorForm({ ...editOperatorForm, workshop_id: e.target.value })}
+                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+              >
+                <option value="">-- Chưa gán phân xưởng --</option>
+                {workshops.map((w) => (
+                  <option key={w.id} value={String(w.id)}>
+                    {w.code} - {w.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <Input
+            label="Bậc Thợ & Tay Nghề Đứng Máy"
+            value={editOperatorForm.skill_level}
+            onChange={(e) => setEditOperatorForm({ ...editOperatorForm, skill_level: e.target.value })}
+            required
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Select
+              label="Ca Làm Việc"
+              value={editOperatorForm.shift}
+              onChange={(e) => setEditOperatorForm({ ...editOperatorForm, shift: e.target.value })}
+              options={[
+                { value: 'Ca 1 (Hành chính)', label: 'Ca 1 (Hành chính: 08:00 - 17:00)' },
+                { value: 'Ca 2 (Chiều/Đêm)', label: 'Ca 2 (Chiều/Đêm: 17:00 - 01:00)' },
+                { value: 'Ca 3 (Đêm)', label: 'Ca 3 (Đêm: 01:00 - 08:00)' },
+                { value: 'Xoay ca luân phiên', label: 'Xoay ca luân phiên' },
+              ]}
+            />
+            <Select
+              label="Trạng Thái"
+              value={editOperatorForm.status}
+              onChange={(e) => setEditOperatorForm({ ...editOperatorForm, status: e.target.value })}
+              options={[
+                { value: 'active', label: 'Hoạt động / Sẵn sàng đứng máy' },
+                { value: 'busy', label: 'Đang chạy đơn hàng gấp' },
+                { value: 'leave', label: 'Nghỉ phép / Tạm vắng' },
+              ]}
+            />
+          </div>
+          <Input
+            label="Ghi chú kinh nghiệm / Dòng máy chuyên trách"
+            value={editOperatorForm.notes}
+            onChange={(e) => setEditOperatorForm({ ...editOperatorForm, notes: e.target.value })}
+          />
+        </form>
+      </Modal>
+
     </div>
   );
 }

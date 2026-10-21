@@ -49,4 +49,11 @@ router.post('/steps', authorizeRoles('production', 'admin'), validateBody(['name
 router.put('/steps/:id', authorizeRoles('production', 'admin'), productionController.updateStep);
 router.delete('/steps/:id', authorizeRoles('production', 'admin'), productionController.deleteStep);
 
+
+// Operators (Quản lý Thợ Máy CNC)
+router.get('/operators', productionController.getOperators);
+router.post('/operators', authorizeRoles('production', 'admin'), validateBody(['name']), productionController.createOperator);
+router.put('/operators/:id', authorizeRoles('production', 'admin'), productionController.updateOperator);
+router.delete('/operators/:id', authorizeRoles('production', 'admin'), productionController.deleteOperator);
+
 module.exports = router;

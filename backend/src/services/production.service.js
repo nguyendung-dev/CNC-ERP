@@ -154,6 +154,23 @@ class ProductionService {
   async deleteStep(id) {
     return await productionRepo.deleteStep(id);
   }
+
+  // Operators (Thợ máy CNC)
+  async getOperators(workshopId) {
+    return await productionRepo.getOperators(workshopId);
+  }
+
+  async createOperator(data) {
+    return await productionRepo.createOperator(data);
+  }
+
+  async updateOperator(id, data) {
+    return await productionRepo.updateOperator(id, data);
+  }
+
+  async deleteOperator(id) {
+    return await productionRepo.deleteOperator(id);
+  }
 }
 
 module.exports = new ProductionService();

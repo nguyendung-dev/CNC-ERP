@@ -205,6 +205,68 @@ class ProductionRepository {
     await pool.query('DELETE FROM production_steps WHERE id = ?', [id]);
     return true;
   }
+
+  // Operators (Thợ máy CNC)
+  async getOperators(workshopId) {
+    let query = `
+      SELECT o.*, w.name as workshop_name, w.code as workshop_code
+      FROM operators o
+      LEFT JOIN workshops w ON o.workshop_id = w.id
+    `;
+    const params = [];
+    if (workshopId) {
+      query += ' WHERE o.workshop_id = ?';
+      params.push(workshopId);
+    }
+    query += ' ORDER BY o.id ASC';
+    const [rows] = await pool.query(query, params);
+    return rows;
+  }
+
+  async getOperatorById(id) {
+    const [rows] = await pool.query(
+      `SELECT o.*, w.name as workshop_name, w.code as workshop_code
+       FROM operators o
+       LEFT JOIN workshops w ON o.workshop_id = w.id
+       WHERE o.id = ?`,
+      [id]
+    );
+    return rows[0] || null;
+  }
+
+  async createOperator(data) {
+    const { code, name, phone, workshop_id, skill_level, shift, status, notes } = data;
+    const opCode = code || `THO-${Date.now().toString().slice(-4)}`;
+    const [result] = await pool.query(
+      `INSERT INTO operators (code, name, phone, workshop_id, skill_level, shift, status, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [opCode, name, phone || '', workshop_id || null, skill_level || 'Thợ đứng máy CNC', shift || 'Ca 1 (Hành chính)', status || 'active', notes || '']
+    );
+    return this.getOperatorById(result.insertId);
+  }
+
+  async updateOperator(id, data) {
+    const { code, name, phone, workshop_id, skill_level, shift, status, notes } = data;
+    await pool.query(
+      `UPDATE operators SET
+        code = COALESCE(?, code),
+        name = COALESCE(?, name),
+        phone = COALESCE(?, phone),
+        workshop_id = COALESCE(?, workshop_id),
+        skill_level = COALESCE(?, skill_level),
+        shift = COALESCE(?, shift),
+        status = COALESCE(?, status),
+        notes = COALESCE(?, notes)
+      WHERE id = ?`,
+      [code, name, phone, workshop_id !== undefined ? workshop_id : null, skill_level, shift, status, notes, id]
+    );
+    return this.getOperatorById(id);
+  }
+
+  async deleteOperator(id) {
+    await pool.query('DELETE FROM operators WHERE id = ?', [id]);
+    return true;
+  }
 }
 
 module.exports = new ProductionRepository();

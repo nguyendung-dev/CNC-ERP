@@ -426,6 +426,41 @@ async function initializeDatabase() {
       console.log('[Database] Seeded 5 standard CNC-ERP user roles with password: "123456"');
     }
 
+    
+    // 14. Operators Table (Thợ máy CNC / Kỹ thuật viên phân xưởng)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS operators (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        code VARCHAR(50) UNIQUE NOT NULL,
+        name VARCHAR(150) NOT NULL,
+        phone VARCHAR(50),
+        workshop_id INT,
+        skill_level VARCHAR(150) DEFAULT 'Thợ đứng máy CNC',
+        shift VARCHAR(50) DEFAULT 'Ca 1 (Hành chính)',
+        status VARCHAR(50) DEFAULT 'active',
+        notes TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (workshop_id) REFERENCES workshops(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    const [existingOperators] = await pool.query('SELECT COUNT(*) as count FROM operators');
+    if (existingOperators[0].count === 0) {
+      await pool.query(`
+        INSERT INTO operators (code, name, phone, workshop_id, skill_level, shift, status, notes) VALUES
+        ('THO-001', 'Nguyễn Văn Hùng', '0912111222', 1, 'Thợ bậc 5/7 - Đứng máy Phay CNC 4 trục Mazak', 'Ca 1 (Hành chính)', 'active', 'Kinh nghiệm 6 năm, lập trình Mastercam & vận hành phay 4 trục'),
+        ('THO-002', 'Trần Quốc Tuấn', '0912333444', 1, 'Thợ bậc 4/7 - Vận hành Tiện CNC Doosan Lynx', 'Ca 1 (Hành chính)', 'active', 'Chuyên tiện thô/tinh dung sai h6, tiện ren các bước phi chuẩn'),
+        ('THO-003', 'Lê Văn Đạt', '0912555666', 1, 'Thợ bậc 3/7 - Vận hành Phay Mazak VCN', 'Ca 2 (Chiều/Đêm)', 'active', 'Gá phôi, rà tâm phôi và chạy tinh chi tiết nhôm hàng loạt'),
+        ('THO-004', 'Phạm Minh Đức', '0912777888', 1, 'Thợ bậc 6/7 - Trưởng kíp xưởng máy A', 'Ca 1 (Hành chính)', 'active', 'Hiệu chỉnh dao bù mòn, kiểm định đầu ra trước khi bàn giao KCS'),
+        ('THO-005', 'Vũ Anh Quân', '0988111222', 2, 'Thợ bậc 5/7 - Kỹ thuật Cắt Dây EDM Sodick', 'Ca 1 (Hành chính)', 'active', 'Chuyên cắt dây rãnh then, biên dạng khuôn mẫu chính xác ±0.005mm'),
+        ('THO-006', 'Hoàng Quốc Bảo', '0988333444', 2, 'Thợ bậc 4/7 - Mài phẳng & Mài tròn Okamoto', 'Ca 1 (Hành chính)', 'active', 'Mài đạt độ bóng mặt gương Ra 0.2 và phẳng tuyệt đối'),
+        ('THO-007', 'Đỗ Tuấn Kiệt', '0988555666', 2, 'Thợ bậc 3/7 - Thợ phụ Cắt Dây & Xỏ dây', 'Ca 2 (Chiều/Đêm)', 'active', 'Hỗ trợ thay dây đồng 0.25mm, rà phôi và thay nước khử khoáng EDM'),
+        ('THO-008', 'Bùi Đình Trọng', '0905111222', 3, 'Thợ bậc 4/7 - Vận hành Máy cưa Amada tự động', 'Ca 1 (Hành chính)', 'active', 'Cắt phôi thanh đặc thép S45C, phôi ống theo đúng kích thước LSX'),
+        ('THO-009', 'Ngô Quang Huy', '0905333444', 3, 'Thợ bậc 5/7 - Phay cơ vạn năng & Lắp ráp Jig', 'Ca 1 (Hành chính)', 'active', 'Gia công đồ gá kẹp nhanh, dưỡng kiểm tra và hỗ trợ xưởng thô'),
+        ('THO-010', 'Mai Xuân Trường', '0905555666', 3, 'Thợ bậc 3/7 - Vát mép, Khử bavia & Đánh bóng', 'Ca 1 (Hành chính)', 'active', 'Nguội tinh chỉnh, làm sạch bavia sắc sau phay và đóng gói');
+      `);
+    }
+
     console.log('[Database] All tables and indexes are ready.');
   } catch (error) {
     console.error('[Database Init Error]:', error.message);

@@ -171,6 +171,44 @@ class ProductionController {
       next(err);
     }
   }
+
+  // Operators (Thợ máy CNC)
+  async getOperators(req, res, next) {
+    try {
+      const { workshop_id } = req.query;
+      const data = await productionService.getOperators(workshop_id);
+      res.json({ success: true, count: data.length, data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async createOperator(req, res, next) {
+    try {
+      const data = await productionService.createOperator(req.body);
+      res.status(201).json({ success: true, message: 'Thêm thợ máy CNC mới thành công', data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateOperator(req, res, next) {
+    try {
+      const data = await productionService.updateOperator(req.params.id, req.body);
+      res.json({ success: true, message: 'Cập nhật thông tin thợ máy thành công', data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async deleteOperator(req, res, next) {
+    try {
+      await productionService.deleteOperator(req.params.id);
+      res.json({ success: true, message: 'Đã xóa thợ máy khỏi hệ thống' });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new ProductionController();

@@ -2,14 +2,16 @@ const { pool } = require('../config/db');
 
 class WorkshopRepository {
   async getAll(search) {
-    let query = 'SELECT * FROM workshops';
+    let query = `SELECT w.*, 
+       COALESCE((SELECT COUNT(*) FROM operators o WHERE o.workshop_id = w.id), w.operator_count) as operator_count
+       FROM workshops w`;
     const params = [];
     if (search) {
-      query += ' WHERE name LIKE ? OR code LIKE ? OR manager_name LIKE ? OR main_machines LIKE ?';
+      query += ' WHERE w.name LIKE ? OR w.code LIKE ? OR w.manager_name LIKE ? OR w.main_machines LIKE ?';
       const term = `%${search}%`;
       params.push(term, term, term, term);
     }
-    query += ' ORDER BY id ASC';
+    query += ' ORDER BY w.id ASC';
     const [rows] = await pool.query(query, params);
     return rows;
   }
