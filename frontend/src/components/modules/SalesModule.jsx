@@ -789,23 +789,6 @@ export default function SalesModule({ initialSubTab }) {
       {/* Parts Catalog SubTab */}
       {activeSubTab === 'parts' && (
         <div className="space-y-4">
-          <div className="bg-blue-50/60 border border-blue-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-blue-600" />
-                <span>Danh Mục Sản Phẩm & Chi Tiết Gia Công CNC</span>
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Định nghĩa sẵn các chi tiết cơ khí thường gia công để chọn nhanh khi Báo giá CNC và phát Lệnh sản xuất (LSX).
-              </p>
-            </div>
-            {canManageQuotations && (
-              <Button size="sm" variant="primary" icon={Plus} onClick={handleOpenAddPart}>
-                Thêm Chi Tiết Mới
-              </Button>
-            )}
-          </div>
-
           <Table
             isLoading={loading}
             data={partsList}
@@ -1646,6 +1629,149 @@ export default function SalesModule({ initialSubTab }) {
           </form>
         </Modal>
       )}
+      {/* Create Part Modal */}
+      <Modal
+        isOpen={isAddPartOpen}
+        onClose={() => setIsAddPartOpen(false)}
+        title="Thêm Chi Tiết Gia Công Mới Vào Danh Mục"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsAddPartOpen(false)}>
+              Hủy
+            </Button>
+            <Button variant="primary" onClick={handleCreatePart} icon={Plus}>
+              Lưu Chi Tiết
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleCreatePart} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Mã Chi Tiết"
+              placeholder="VD: CT-06"
+              value={partForm.code}
+              onChange={(e) => setPartForm({ ...partForm, code: e.target.value })}
+              required
+            />
+            <Input
+              label="Tên Chi Tiết Gia Công"
+              placeholder="VD: Trục then hoa phi 45"
+              value={partForm.name}
+              onChange={(e) => setPartForm({ ...partForm, name: e.target.value })}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Mã Bản Vẽ Kỹ Thuật"
+              placeholder="VD: DWG-TH-45"
+              value={partForm.drawing_code}
+              onChange={(e) => setPartForm({ ...partForm, drawing_code: e.target.value })}
+            />
+            <Input
+              label="Quy Cách / Vật Liệu"
+              placeholder="VD: Thép S50C tôi cao tần"
+              value={partForm.material_category}
+              onChange={(e) => setPartForm({ ...partForm, material_category: e.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Select
+              label="Đơn Vị Tính"
+              value={partForm.unit}
+              onChange={(e) => setPartForm({ ...partForm, unit: e.target.value })}
+              options={[
+                { value: 'Cái', label: 'Cái' },
+                { value: 'Bộ', label: 'Bộ' },
+                { value: 'Chiếc', label: 'Chiếc' },
+                { value: 'Cặp', label: 'Cặp' },
+              ]}
+            />
+            <CurrencyInput
+              label="Đơn Giá Ước Tính (VNĐ)"
+              value={partForm.unit_price_estimate}
+              onChange={(val) => setPartForm({ ...partForm, unit_price_estimate: val })}
+            />
+          </div>
+          <Input
+            label="Ghi Chú Kỹ Thuật & Yêu Cầu Gia Công"
+            placeholder="VD: Tiện thô + phay rãnh then dung sai h6, mài bóng..."
+            value={partForm.note}
+            onChange={(e) => setPartForm({ ...partForm, note: e.target.value })}
+          />
+        </form>
+      </Modal>
+
+      {/* Edit Part Modal */}
+      <Modal
+        isOpen={isEditPartOpen}
+        onClose={() => setIsEditPartOpen(false)}
+        title="Chỉnh Sửa Chi Tiết Gia Công CNC"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsEditPartOpen(false)}>
+              Hủy
+            </Button>
+            <Button variant="primary" onClick={handleUpdatePart} icon={Pencil}>
+              Cập Nhật Chi Tiết
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleUpdatePart} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Mã Chi Tiết"
+              value={partForm.code}
+              onChange={(e) => setPartForm({ ...partForm, code: e.target.value })}
+              required
+            />
+            <Input
+              label="Tên Chi Tiết Gia Công"
+              value={partForm.name}
+              onChange={(e) => setPartForm({ ...partForm, name: e.target.value })}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Mã Bản Vẽ Kỹ Thuật"
+              value={partForm.drawing_code}
+              onChange={(e) => setPartForm({ ...partForm, drawing_code: e.target.value })}
+            />
+            <Input
+              label="Quy Cách / Vật Liệu"
+              value={partForm.material_category}
+              onChange={(e) => setPartForm({ ...partForm, material_category: e.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Select
+              label="Đơn Vị Tính"
+              value={partForm.unit}
+              onChange={(e) => setPartForm({ ...partForm, unit: e.target.value })}
+              options={[
+                { value: 'Cái', label: 'Cái' },
+                { value: 'Bộ', label: 'Bộ' },
+                { value: 'Chiếc', label: 'Chiếc' },
+                { value: 'Cặp', label: 'Cặp' },
+              ]}
+            />
+            <CurrencyInput
+              label="Đơn Giá Ước Tính (VNĐ)"
+              value={partForm.unit_price_estimate}
+              onChange={(val) => setPartForm({ ...partForm, unit_price_estimate: val })}
+            />
+          </div>
+          <Input
+            label="Ghi Chú Kỹ Thuật & Yêu Cầu Gia Công"
+            value={partForm.note}
+            onChange={(e) => setPartForm({ ...partForm, note: e.target.value })}
+          />
+        </form>
+      </Modal>
+
     </div>
   );
 }
