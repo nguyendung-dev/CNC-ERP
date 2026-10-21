@@ -12,7 +12,8 @@ import {
   Calculator,
   Trash2,
   Upload,
-  Paperclip
+  Paperclip,
+  X
 } from 'lucide-react';
 import api from '../../api';
 import Table from '../ui/Table';
@@ -61,7 +62,7 @@ export default function SalesModule() {
     quantity: 10,
     raw_material_cost: 0,
     machine_hours: 0,
-    machine_hourly_rate: 350000,
+    machine_hourly_rate: 0,
     subcontract_cost: 0,
     transport_cost: 0,
   });
@@ -122,10 +123,11 @@ export default function SalesModule() {
         quantity: 10,
         raw_material_cost: 0,
         machine_hours: 0,
-        machine_hourly_rate: 350000,
+        machine_hourly_rate: 0,
         subcontract_cost: 0,
         transport_cost: 0,
       });
+      setDrawingFile(null);
       loadData();
       showSuccess('Tạo báo giá thành công!', 'Báo giá cho chi tiết "' + partName + '" của khách hàng ' + customerName + ' đã được tạo.');
     } catch (err) {
@@ -590,19 +592,13 @@ export default function SalesModule() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Tên chi tiết gia công"
               placeholder="VD: Trục truyền động"
               value={quotationForm.part_name}
               onChange={(e) => setQuotationForm({ ...quotationForm, part_name: e.target.value })}
               required
-            />
-            <Input
-              label="Mã bản vẽ kỹ thuật"
-              placeholder="VD: DWG-SKR-01"
-              value={quotationForm.drawing_code}
-              onChange={(e) => setQuotationForm({ ...quotationForm, drawing_code: e.target.value })}
             />
             <Input
               label="Số lượng chi tiết"
@@ -613,17 +609,72 @@ export default function SalesModule() {
             />
           </div>
 
+          {/* Bản vẽ kỹ thuật: Tùy chọn nhập mã và/hoặc tải file CAD / PDF */}
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-slate-700">
+                Bản vẽ kỹ thuật <span className="text-slate-400 font-normal">(Nhập mã hoặc tải file bản vẽ CAD/PDF/ảnh)</span>
+              </label>
+              <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-lg text-xs font-semibold cursor-pointer transition">
+                <Upload className="w-3.5 h-3.5" />
+                <span>Chọn file bản vẽ</span>
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.dwg,.dxf,.step,.stp,.png,.jpg,.jpeg"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setDrawingFile(file);
+                      if (!quotationForm.drawing_code) {
+                        const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                        setQuotationForm(prev => ({ ...prev, drawing_code: nameWithoutExt }));
+                      }
+                    }
+                  }}
+                />
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Mã bản vẽ kỹ thuật (VD: DWG-SKR-01 hoặc để theo tên file)"
+                value={quotationForm.drawing_code}
+                onChange={(e) => setQuotationForm({ ...quotationForm, drawing_code: e.target.value })}
+                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+              />
+            </div>
+
+            {drawingFile && (
+              <div className="flex items-center justify-between px-3 py-2 bg-white border border-blue-300 rounded-lg text-xs shadow-2xs">
+                <div className="flex items-center gap-2 truncate">
+                  <Paperclip className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span className="font-semibold text-slate-800 truncate">{drawingFile.name}</span>
+                  <span className="text-[11px] text-slate-400 shrink-0">({(drawingFile.size / 1024).toFixed(1)} KB)</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDrawingFile(null)}
+                  className="p-1 text-slate-400 hover:text-rose-600 rounded transition"
+                  title="Gỡ file đính kèm"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
             <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
               <DollarSign className="w-4 h-4 text-blue-600" /> Cấu thành chi phí gia công
             </h4>
 
             <div className="grid grid-cols-2 gap-4">
-              <Input
+              <CurrencyInput
                 label="Chi phí phôi (VNĐ)"
-                type="number"
                 value={quotationForm.raw_material_cost}
-                onChange={(e) => setQuotationForm({ ...quotationForm, raw_material_cost: Number(e.target.value) })}
+                onChange={(val) => setQuotationForm({ ...quotationForm, raw_material_cost: val })}
               />
               <Input
                 label="Số giờ chạy máy CNC (h)"
@@ -632,25 +683,22 @@ export default function SalesModule() {
                 value={quotationForm.machine_hours}
                 onChange={(e) => setQuotationForm({ ...quotationForm, machine_hours: Number(e.target.value) })}
               />
-              <Input
+              <CurrencyInput
                 label="Đơn giá giờ máy (VNĐ/h)"
-                type="number"
                 value={quotationForm.machine_hourly_rate}
-                onChange={(e) => setQuotationForm({ ...quotationForm, machine_hourly_rate: Number(e.target.value) })}
+                onChange={(val) => setQuotationForm({ ...quotationForm, machine_hourly_rate: val })}
               />
-              <Input
+              <CurrencyInput
                 label="Gia công ngoài (Xi mạ, Nhiệt luyện)"
-                type="number"
                 value={quotationForm.subcontract_cost}
-                onChange={(e) => setQuotationForm({ ...quotationForm, subcontract_cost: Number(e.target.value) })}
+                onChange={(val) => setQuotationForm({ ...quotationForm, subcontract_cost: val })}
               />
             </div>
 
-            <Input
+            <CurrencyInput
               label="Chi phí vận chuyển & bao bì (VNĐ)"
-              type="number"
               value={quotationForm.transport_cost}
-              onChange={(e) => setQuotationForm({ ...quotationForm, transport_cost: Number(e.target.value) })}
+              onChange={(val) => setQuotationForm({ ...quotationForm, transport_cost: val })}
             />
 
             <div className="pt-2 flex justify-between items-center text-sm font-bold border-t border-slate-200">

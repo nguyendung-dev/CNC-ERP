@@ -18,8 +18,9 @@ export default function CurrencyInput({
   id,
 }) {
   // Format numeric value with dots: 1000000 -> 1.000.000
+  // If value is 0 or empty, render empty so placeholder "0" is visible and typing doesn't have leading 0s
   const displayValue =
-    value !== undefined && value !== null && value !== ''
+    value !== undefined && value !== null && value !== '' && Number(value) !== 0
       ? Number(value.toString().replace(/\D/g, '')).toLocaleString('vi-VN')
       : '';
 
@@ -48,12 +49,12 @@ export default function CurrencyInput({
           className={`w-full px-3 py-2 pr-10 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white font-mono font-medium text-slate-800 ${className}`}
         />
         {suffix && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none select-none">
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 pointer-events-none">
             {suffix}
           </span>
         )}
       </div>
-      {hint && <p className="text-[11px] text-slate-400 mt-1">{hint}</p>}
+      {hint && <p className="mt-1 text-[11px] text-slate-400">{hint}</p>}
     </div>
   );
 }
