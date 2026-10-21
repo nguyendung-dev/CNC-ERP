@@ -23,6 +23,28 @@ import { Input, Select } from '../ui/Input';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 
+export const STANDARD_CNC_STEPS = [
+  { value: 'Cắt phôi', label: '1. Cắt phôi (Thợ xưởng / Kỹ thuật phôi)', role: 'Kỹ thuật phôi' },
+  { value: 'Phay CNC mặt chuẩn', label: '2. Phay CNC mặt chuẩn (Thợ máy Phay CNC)', role: 'Thợ máy Phay CNC' },
+  { value: 'Tiện CNC chi tiết', label: '3. Tiện CNC chi tiết (Thợ máy Tiện CNC)', role: 'Thợ máy Tiện CNC' },
+  { value: 'Gia công ngoài (Xi mạ/Nhiệt luyện)', label: '4. Gia công ngoài (Nhiệt luyện/Xi mạ/Anode - Quản đốc)', role: 'Quản đốc xưởng' },
+  { value: 'Mài phẳng / Sửa nguội', label: '5. Mài phẳng / Khử ba via (Thợ nguội)', role: 'Thợ nguội hoàn thiện' },
+  { value: 'Kiểm tra KCS / QC', label: '6. Kiểm tra KCS / Đo CMM & Dung sai (Kỹ sư QC)', role: 'Kỹ sư KCS / QC' },
+  { value: 'Đã QC nghiệm thu & Nhập kho thành phẩm', label: '7. Hoàn thành & Bàn giao kho (Thủ kho / QC)', role: 'Thủ kho & QC' },
+];
+
+export const getStepRoleLabel = (step) => {
+  if (!step) return 'Bộ phận Sản xuất';
+  if (step.includes('Cắt phôi')) return 'Kỹ thuật phôi';
+  if (step.includes('Phay')) return 'Thợ máy Phay CNC';
+  if (step.includes('Tiện')) return 'Thợ máy Tiện CNC';
+  if (step.includes('Gia công ngoài') || step.includes('Anode') || step.includes('Nhiệt luyện') || step.includes('Xi mạ')) return 'Quản đốc xưởng';
+  if (step.includes('Mài') || step.includes('nguội')) return 'Thợ nguội hoàn thiện';
+  if (step.includes('QC') || step.includes('KCS')) return 'Kỹ sư KCS / QC';
+  if (step.includes('kho') || step.includes('Hoàn thành') || step.includes('Bàn giao')) return 'Thủ kho & QC';
+  return 'Bộ phận Sản xuất';
+};
+
 export default function ProductionModule({ initialSubTab }) {
   const { showSuccess, showError, confirmDelete } = useToast();
   const { user } = useAuth();
@@ -125,13 +147,38 @@ export default function ProductionModule({ initialSubTab }) {
     const found = orders.find((o) => String(o.id) === String(lsxId));
     if (found) {
       const remaining = Math.max(1, (Number(found.target_qty) || 0) - (Number(found.completed_qty) || 0));
+      const currentIndex = STANDARD_CNC_STEPS.findIndex((s) => s.value === found.current_step);
+      const nextStep = currentIndex >= 0 && currentIndex < STANDARD_CNC_STEPS.length - 1
+        ? STANDARD_CNC_STEPS[currentIndex + 1].value
+        : 'Kiểm tra KCS / QC';
       setWipForm((prev) => ({
         ...prev,
         production_order_id: found.id,
         from_step: found.current_step || prev.from_step,
+        to_step: nextStep,
         qty_passed: remaining,
       }));
     }
+  };
+
+  const handleQuickMoveStep = (order) => {
+    const remaining = Math.max(1, (Number(order.target_qty) || 0) - (Number(order.completed_qty) || 0));
+    const currentIndex = STANDARD_CNC_STEPS.findIndex((s) => s.value === order.current_step);
+    const nextStep = currentIndex >= 0 && currentIndex < STANDARD_CNC_STEPS.length - 1
+      ? STANDARD_CNC_STEPS[currentIndex + 1].value
+      : (order.current_step === 'Kiểm tra KCS / QC' ? 'Đã QC nghiệm thu & Nhập kho thành phẩm' : 'Phay CNC mặt chuẩn');
+
+    setWipForm({
+      production_order_id: order.id,
+      from_step: order.current_step || 'Cắt phôi',
+      to_step: nextStep,
+      operator: user?.full_name || '',
+      machine_name: '',
+      qty_passed: remaining,
+      qty_failed: 0,
+      fail_reason: '',
+    });
+    setIsWipModalOpen(true);
   };
 
   const handleSelectLsxForSub = (lsxId) => {
@@ -388,9 +435,16 @@ export default function ProductionModule({ initialSubTab }) {
             {
               header: 'Công đoạn hiện tại',
               render: (row) => (
-                <span className="text-xs font-semibold px-2 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  {row.current_step}
-                </span>
+                <div className="flex flex-col gap-1 py-0.5">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 w-fit">
+                    <Workflow className="w-3 h-3 text-indigo-500 shrink-0" />
+                    {row.current_step}
+                  </span>
+                  <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                    <span>Phụ trách: <strong className="text-slate-700">{getStepRoleLabel(row.current_step)}</strong></span>
+                  </div>
+                </div>
               ),
             },
             {
@@ -403,6 +457,18 @@ export default function ProductionModule({ initialSubTab }) {
                 const isFinished = Number(row.completed_qty) >= Number(row.target_qty);
                 return (
                   <div className="flex items-center gap-1.5">
+                    {!isFinished && canManageProduction && (
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        icon={ArrowRight}
+                        onClick={() => handleQuickMoveStep(row)}
+                        className="text-xs py-1 px-2.5 bg-blue-600 hover:bg-blue-700 text-white shadow-xs font-semibold"
+                        title="Chuyển sang công đoạn tiếp theo và báo cáo số lượng Đạt/NG"
+                      >
+                        Chuyển bước
+                      </Button>
+                    )}
                     {!isFinished && canManageProduction && (
                       <Button
                         size="sm"
@@ -600,6 +666,15 @@ export default function ProductionModule({ initialSubTab }) {
               required
             />
           </div>
+          <Select
+            label="Công đoạn bắt đầu của LSX"
+            value={lsxForm.current_step}
+            onChange={(e) => setLsxForm({ ...lsxForm, current_step: e.target.value })}
+            options={STANDARD_CNC_STEPS.map((s) => ({
+              value: s.value,
+              label: s.label,
+            }))}
+          />
         </form>
       </Modal>
 
@@ -626,17 +701,38 @@ export default function ProductionModule({ initialSubTab }) {
             ]}
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          {wipForm.production_order_id && (() => {
+            const currentOrder = orders.find((o) => String(o.id) === String(wipForm.production_order_id));
+            if (!currentOrder) return null;
+            return (
+              <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3 text-xs text-slate-700 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="font-bold text-blue-800">{currentOrder.code}</span>: {currentOrder.part_name}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span>Kế hoạch: <strong>{currentOrder.target_qty}</strong></span>
+                  <span>Đã xong: <strong className="text-emerald-700">{currentOrder.completed_qty}</strong></span>
+                  <span>Phế phẩm: <strong className="text-rose-600">{currentOrder.ng_qty} NG</strong></span>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="Từ công đoạn"
+              label="Từ công đoạn hiện tại"
               value={wipForm.from_step}
               onChange={(e) => setWipForm({ ...wipForm, from_step: e.target.value })}
               required
             />
-            <Input
-              label="Đến công đoạn"
+            <Select
+              label="Chuyển sang công đoạn tiếp theo"
               value={wipForm.to_step}
               onChange={(e) => setWipForm({ ...wipForm, to_step: e.target.value })}
+              options={STANDARD_CNC_STEPS.map((s) => ({
+                value: s.value,
+                label: s.label,
+              }))}
               required
             />
           </div>
