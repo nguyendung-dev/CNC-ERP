@@ -56,6 +56,7 @@ import ProductionModule from '../components/modules/ProductionModule';
 import FinanceModule from '../components/modules/FinanceModule';
 import ReportsModule from '../components/modules/ReportsModule';
 import CustomersModule from '../components/modules/CustomersModule';
+import PermissionMatrixModule from '../components/modules/PermissionMatrixModule';
 
 export default function DashboardPage() {
   const { user, token, isLoading, logout, ROLE_LABELS } = useAuth();
@@ -441,13 +442,13 @@ export default function DashboardPage() {
     });
   };
 
-  // Role-based Nav Permissions Map: Only Admin sees all 7 modules!
+  // Role-based Nav Permissions Map: All roles can view Matrix & Workflow!
   const ROLE_NAV_PERMISSIONS = {
     admin: ['home', 'sales', 'customers', 'inventory', 'production', 'finance', 'reports', 'settings'],
-    sales: ['home', 'sales', 'customers', 'inventory'],
-    production: ['home', 'production', 'inventory'],
-    warehouse: ['home', 'inventory', 'production'],
-    accountant: ['home', 'finance', 'sales', 'customers', 'reports'],
+    sales: ['home', 'sales', 'customers', 'inventory', 'settings'],
+    production: ['home', 'production', 'inventory', 'settings'],
+    warehouse: ['home', 'inventory', 'production', 'settings'],
+    accountant: ['home', 'finance', 'sales', 'customers', 'reports', 'settings'],
   };
 
   const allowedNavIds = (user && ROLE_NAV_PERMISSIONS[user.role]) || ['home'];
@@ -545,7 +546,28 @@ export default function DashboardPage() {
       ],
     },
     { id: 'reports', label: t('nav.reports', 'Báo cáo'), icon: BarChart3 },
-    { id: 'settings', label: t('nav.settings', 'Phân quyền'), icon: SlidersHorizontal },
+    {
+      id: 'settings',
+      label: t('nav.settings', 'Phân quyền'),
+      icon: ShieldCheck,
+      subItems: [
+        {
+          id: 'matrix',
+          label: 'Ma Trận Phân Quyền',
+          desc: 'Phân quyền chi tiết 5 vai trò & từng chức năng',
+        },
+        {
+          id: 'workflow',
+          label: 'Quy Trình 8 Bước',
+          desc: 'Chu trình sản xuất cơ khí CNC khép kín từ Báo giá đến Giao hàng',
+        },
+        {
+          id: 'users',
+          label: 'Tài Khoản & Cấp Quyền',
+          desc: 'Quản lý danh sách nhân sự & cấp quyền vai trò',
+        },
+      ],
+    },
   ];
 
   const navItems = allNavItems.filter((item) => allowedNavIds.includes(item.id));
@@ -559,7 +581,7 @@ export default function DashboardPage() {
     production: 'Quản lý Sản Xuất & Điều Độ Máy',
     finance: 'Quản lý Tài Chính & Dòng Tiền',
     reports: 'Báo Cáo & Phân Tích Quản Trị',
-    settings: 'Phân Quyền Vai Trò Người Dùng (RBAC)',
+    settings: 'Ma Trận Phân Quyền & Quy Trình Vận Hành 8 Bước CNC',
   };
 
   if (isLoading || !user || !token) {
@@ -635,450 +657,30 @@ export default function DashboardPage() {
           {activeNav === 'finance' && <FinanceModule initialSubTab={activeSubNav} />}
           {activeNav === 'reports' && <ReportsModule />}
 
-          {/* Settings / RBAC View with Integrated User Registration & User Accounts Table */}
+          {/* Settings / RBAC View with Integrated Permission Matrix, 8-Step Workflow & User Accounts */}
           {activeNav === 'settings' && (
-            <div className="space-y-6">
-              {/* Header & Role Overview */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                      <ShieldCheck className="w-5 h-5 text-blue-600" />
-                      Phân Quyền Vai Trò Người Dùng (RBAC) & Quản Trị Nhân Viên
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Phân quyền truy cập các module gia công cơ khí chính xác theo đúng chức danh & nhiệm vụ.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                    <button
-                      onClick={fetchUsers}
-                      disabled={usersLoading}
-                      className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${usersLoading ? 'animate-spin text-blue-600' : 'text-slate-500'}`} />
-                      Làm mới dữ liệu
-                    </button>
-                  </div>
-                </div>
-
-                {/* 5 Standard CNC Roles Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                  <div className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/70 hover:border-blue-200 transition">
-                    <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded bg-rose-50 text-rose-700 border border-rose-200 mb-1.5">
-                      Admin
-                    </span>
-                    <h4 className="font-bold text-xs text-slate-900">Quản trị viên</h4>
-                    <p className="text-[11px] text-slate-500 mt-1 leading-normal">
-                      Toàn quyền 5 phân hệ, phê duyệt tạm ứng ngân sách, cấu hình hệ thống & phân quyền.
-                    </p>
-                  </div>
-
-                  <div className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/70 hover:border-blue-200 transition">
-                    <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded bg-blue-50 text-blue-700 border border-blue-200 mb-1.5">
-                      Sales
-                    </span>
-                    <h4 className="font-bold text-xs text-slate-900">Kinh doanh</h4>
-                    <p className="text-[11px] text-slate-500 mt-1 leading-normal">
-                      Bóc tách chi tiết, lập Báo giá CNC (phôi, máy, ngoài), theo dõi đơn đặt hàng (SO).
-                    </p>
-                  </div>
-
-                  <div className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/70 hover:border-blue-200 transition">
-                    <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded bg-cyan-50 text-cyan-700 border border-cyan-200 mb-1.5">
-                      Production
-                    </span>
-                    <h4 className="font-bold text-xs text-slate-900">Sản xuất</h4>
-                    <p className="text-[11px] text-slate-500 mt-1 leading-normal">
-                      Lập LSX, điều độ máy CNC, ghi nhận sản lượng & tỷ lệ lỗi NG, theo dõi gia công ngoài.
-                    </p>
-                  </div>
-
-                  <div className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/70 hover:border-blue-200 transition">
-                    <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded bg-amber-50 text-amber-700 border border-amber-200 mb-1.5">
-                      Warehouse
-                    </span>
-                    <h4 className="font-bold text-xs text-slate-900">Thủ kho</h4>
-                    <p className="text-[11px] text-slate-500 mt-1 leading-normal">
-                      Quản lý kho phôi kim loại, dao cụ phụ tùng, cảnh báo min-stock, xuất kho sản xuất.
-                    </p>
-                  </div>
-
-                  <div className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/70 hover:border-blue-200 transition">
-                    <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-50 text-emerald-700 border border-emerald-200 mb-1.5">
-                      Accountant
-                    </span>
-                    <h4 className="font-bold text-xs text-slate-900">Kế toán</h4>
-                    <p className="text-[11px] text-slate-500 mt-1 leading-normal">
-                      Duyệt tạm ứng phôi, lập đề nghị thanh toán NCC có cấn trừ, theo dõi sổ công nợ.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Main Section: Registration Form + Users Table */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* Registration Form Card (approx 4.5 cols) */}
-                <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs">
-                  <div className="pb-3 border-b border-slate-100 mb-4 flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                        <UserPlus className="w-4 h-4 text-blue-600" />
-                        Đăng Ký & Thêm Tài Khoản Mới
-                      </h3>
-                      <p className="text-xs text-slate-400 mt-0.5">Tạo tài khoản phân quyền nhân sự xưởng CNC</p>
-                    </div>
-                  </div>
-
-                  {regMessage.text && (
-                    <div
-                      className={`mb-4 p-3 rounded-xl text-xs flex items-start gap-2 ${
-                        regMessage.type === 'success'
-                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                          : 'bg-rose-50 text-rose-800 border border-rose-200'
-                      }`}
-                    >
-                      {regMessage.type === 'success' ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                      ) : (
-                        <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                      )}
-                      <span>{regMessage.text}</span>
-                    </div>
-                  )}
-
-                  <form onSubmit={handleRegisterUser} className="space-y-3.5">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Họ và tên nhân viên <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={regForm.full_name}
-                        onChange={(e) => setRegForm({ ...regForm, full_name: e.target.value })}
-                        placeholder="VD: Trần Văn Bình"
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
-                          Tên đăng nhập <span className="text-rose-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={regForm.username}
-                          onChange={(e) => setRegForm({ ...regForm, username: e.target.value })}
-                          placeholder="VD: binhtv"
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
-                          Mật khẩu khởi tạo <span className="text-rose-500">*</span>
-                        </label>
-                        <input
-                          type="password"
-                          required
-                          value={regForm.password}
-                          onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
-                          placeholder="Tối thiểu 6 ký tự"
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Địa chỉ Email <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        value={regForm.email}
-                        onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
-                        placeholder="VD: binhtv@cnc.com"
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Phân quyền vai trò (Role) <span className="text-rose-500">*</span>
-                      </label>
-                      <select
-                        value={regForm.role}
-                        onChange={(e) => setRegForm({ ...regForm, role: e.target.value })}
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-                      >
-                        <option value="sales">Kinh doanh (Sales) - Báo giá, đơn hàng SO</option>
-                        <option value="production">Sản xuất (Production) - Lập LSX, điều độ máy</option>
-                        <option value="warehouse">Kho vật tư (Warehouse) - Quản lý phôi, dao cụ</option>
-                        <option value="accountant">Kế toán (Accountant) - Tạm ứng, thanh toán, công nợ</option>
-                        <option value="admin">Quản trị viên (Admin) - Toàn quyền hệ thống</option>
-                      </select>
-                    </div>
-
-                    <div className="pt-2">
-                      <button
-                        type="submit"
-                        disabled={regSubmitting}
-                        className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition active:scale-98 flex items-center justify-center gap-2"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                        {regSubmitting ? 'Đang tạo tài khoản...' : 'Tạo Tài Khoản & Phân Quyền'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-
-                {/* Users List Table Card (approx 7.5 cols) */}
-                <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs flex flex-col">
-                  <div className="pb-3 border-b border-slate-100 mb-4 flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900">
-                        Danh Sách Tài Khoản Trong Hệ Thống ({usersList.length})
-                      </h3>
-                      <p className="text-xs text-slate-400 mt-0.5">Dữ liệu tài khoản lưu trữ thực tế từ MySQL Database</p>
-                    </div>
-                  </div>
-
-                    <div className="flex-1 overflow-x-auto custom-scrollbar">
-                      {usersLoading ? (
-                        <div className="py-12 text-center text-xs text-slate-400 flex flex-col items-center gap-2">
-                          <RefreshCw className="w-5 h-5 animate-spin text-blue-600" />
-                          Đang tải danh sách tài khoản...
-                        </div>
-                      ) : usersList.length === 0 ? (
-                        <div className="py-12 text-center text-xs text-slate-400">
-                          Chưa có dữ liệu người dùng. Vui lòng bấm &quot;Làm mới dữ liệu&quot;.
-                        </div>
-                      ) : (
-                        <table className="w-full min-w-[650px] text-left text-xs whitespace-nowrap">
-                          <thead>
-                            <tr className="border-b border-slate-100 text-slate-400 font-semibold">
-                              <th className="py-2.5 px-3 whitespace-nowrap">Nhân viên</th>
-                              <th className="py-2.5 px-3 whitespace-nowrap">Email & Tên đăng nhập</th>
-                              <th className="py-2.5 px-3 whitespace-nowrap">Phân quyền</th>
-                              <th className="py-2.5 px-3 text-center whitespace-nowrap">Trạng thái</th>
-                              <th className="py-2.5 px-3 text-right whitespace-nowrap">Thao tác</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {usersList
-                              .slice((userPage - 1) * userPageSize, userPage * userPageSize)
-                              .map((u) => {
-                              const roleColor = {
-                                admin: 'bg-rose-50 text-rose-700 border-rose-200',
-                                sales: 'bg-blue-50 text-blue-700 border-blue-200',
-                                production: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-                                warehouse: 'bg-amber-50 text-amber-700 border-amber-200',
-                                accountant: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                              }[u.role] || 'bg-slate-100 text-slate-700 border-slate-200';
-
-                              return (
-                                <tr key={u.id} className="hover:bg-slate-50/80 transition">
-                                  <td className="py-3 px-3">
-                                    <div className="flex items-center gap-2.5">
-                                      <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[11px] shrink-0">
-                                        {u.full_name ? u.full_name.charAt(0).toUpperCase() : 'U'}
-                                      </div>
-                                      <div>
-                                        <p className="font-bold text-slate-800">{u.full_name}</p>
-                                        <span className="text-[10px] text-slate-400">ID #{u.id}</span>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td className="py-3 px-3">
-                                    <p className="text-slate-700 font-medium">{u.email}</p>
-                                    <p className="text-[10px] text-slate-400">@{u.username}</p>
-                                  </td>
-                                  <td className="py-3 px-3">
-                                    <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold border ${roleColor}`}>
-                                      {ROLE_LABELS[u.role] || u.role}
-                                    </span>
-                                  </td>
-                                  <td className="py-3 px-3 text-center">
-                                    <Badge status={u.status || "active"} />
-                                  </td>
-                                  <td className="py-3 px-3 text-right">
-                                    <div className="flex items-center justify-end gap-1.5">
-                                      <button
-                                        onClick={() => handleOpenEditUser(u)}
-                                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                        title="Chỉnh sửa tài khoản"
-                                      >
-                                        <Pencil className="w-3.5 h-3.5" />
-                                      </button>
-                                      {u.id !== 1 && u.id !== user?.id && (
-                                        <button
-                                          onClick={() => handleDeleteUser(u)}
-                                          className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                                          title="Xóa tài khoản"
-                                        >
-                                          <Trash2 className="w-3.5 h-3.5" />
-                                        </button>
-                                      )}
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      )}
-                    </div>
-
-                    {/* Pagination for Users List */}
-                    {usersList.length > 0 && (
-                      <Pagination
-                        currentPage={userPage}
-                        totalItems={usersList.length}
-                        pageSize={userPageSize}
-                        onPageChange={setUserPage}
-                        onPageSizeChange={(newSize) => {
-                          setUserPageSize(newSize);
-                          setUserPage(1);
-                        }}
-                        pageSizeOptions={[5, 10, 20]}
-                      />
-                    )}
-                  </div>
-                </div>
-
-                {/* Edit User Modal */}
-                {editingUser && (
-                  <Modal
-                    isOpen={!!editingUser}
-                    onClose={() => setEditingUser(null)}
-                    title={`Chỉnh Sửa Tài Khoản: @${editingUser.username}`}
-                    maxWidth="max-w-md"
-                    footer={
-                      <div className="flex items-center justify-end gap-2 w-full">
-                        <button
-                          type="button"
-                          onClick={() => setEditingUser(null)}
-                          className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
-                        >
-                          Hủy
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleSaveEditUser}
-                          disabled={editUserSaving}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
-                        >
-                          {editUserSaving ? 'Đang lưu...' : 'Lưu Thay Đổi'}
-                        </button>
-                      </div>
-                    }
-                  >
-                    <form onSubmit={handleSaveEditUser} className="space-y-3.5">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
-                          Họ và tên nhân viên <span className="text-rose-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={editUserForm.full_name || ''}
-                          onChange={(e) => setEditUserForm({ ...editUserForm, full_name: e.target.value })}
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-700 mb-1">
-                            Số điện thoại
-                          </label>
-                          <input
-                            type="tel"
-                            value={editUserForm.phone || ''}
-                            onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value })}
-                            placeholder="VD: 0987654321"
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-700 mb-1">
-                            Email công việc <span className="text-rose-500">*</span>
-                          </label>
-                          <input
-                            type="email"
-                            required
-                            value={editUserForm.email || ''}
-                            onChange={(e) => setEditUserForm({ ...editUserForm, email: e.target.value })}
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-700 mb-1">
-                            Phân quyền vai trò <span className="text-rose-500">*</span>
-                          </label>
-                          <select
-                            value={editUserForm.role || 'sales'}
-                            onChange={(e) => setEditUserForm({ ...editUserForm, role: e.target.value })}
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-                          >
-                            <option value="sales">Kinh doanh (Sales)</option>
-                            <option value="production">Sản xuất (Production)</option>
-                            <option value="warehouse">Kho vật tư (Warehouse)</option>
-                            <option value="accountant">Kế toán (Accountant)</option>
-                            <option value="admin">Quản trị viên (Admin)</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-700 mb-1">
-                            Trạng thái tài khoản <span className="text-rose-500">*</span>
-                          </label>
-                          <select
-                            value={editUserForm.status || 'active'}
-                            onChange={(e) => setEditUserForm({ ...editUserForm, status: e.target.value })}
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-                          >
-                            <option value="active">Hoạt động (Active)</option>
-                            <option value="inactive">Tạm khóa (Inactive)</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="pt-2 border-t border-slate-100">
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
-                          Đặt lại mật khẩu mới (Reset Password)
-                        </label>
-                        <div className="relative">
-                          <input
-                            type={showEditPassword ? 'text' : 'password'}
-                            value={editUserForm.password || ''}
-                            onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })}
-                            placeholder="Để trống nếu giữ nguyên mật khẩu cũ"
-                            className="w-full pl-3 pr-10 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 font-mono"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowEditPassword(!showEditPassword)}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer p-1"
-                            title={showEditPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                          >
-                            {showEditPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                        <p className="text-[10px] text-slate-400 mt-1">
-                          Chỉ nhập khi cần cấp lại mật khẩu mới cho nhân viên.
-                        </p>
-                      </div>
-                    </form>
-                  </Modal>
-                )}
-              </div>
+            <PermissionMatrixModule
+              initialSubTab={activeSubNav}
+              user={user}
+              usersList={usersList}
+              usersLoading={usersLoading}
+              fetchUsers={fetchUsers}
+              regForm={regForm}
+              setRegForm={setRegForm}
+              regSubmitting={regSubmitting}
+              regMessage={regMessage}
+              handleRegisterUser={handleRegisterUser}
+              handleDeleteUser={handleDeleteUser}
+              editingUser={editingUser}
+              setEditingUser={setEditingUser}
+              editUserForm={editUserForm}
+              setEditUserForm={setEditUserForm}
+              editUserSaving={editUserSaving}
+              handleOpenEditUser={handleOpenEditUser}
+              handleSaveEditUser={handleSaveEditUser}
+              showEditPassword={showEditPassword}
+              setShowEditPassword={setShowEditPassword}
+            />
           )}
 
           {/* HOME OVERVIEW - CNC MANUFACTURING DASHBOARD */}
