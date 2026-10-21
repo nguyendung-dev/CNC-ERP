@@ -9,7 +9,6 @@ import {
   Truck, 
   CheckCircle2, 
   Settings,
-  Building2,
   Pencil, 
   ExternalLink,
   Trash2
@@ -38,10 +37,234 @@ export default function ProductionModule({ initialSubTab }) {
   const [orders, setOrders] = useState([]);
   const [movements, setMovements] = useState([]);
   const [subcontracts, setSubcontracts] = useState([]);
-    const [salesOrders, setSalesOrders] = useState([]);
+  const [salesOrders, setSalesOrders] = useState([]);
   const [loading, setLoading] = useState(false);
 
-    const handleDeleteSubcontract = (subId) => {
+  // Modals
+  const [isLsxModalOpen, setIsLsxModalOpen] = useState(false);
+  const [isWipModalOpen, setIsWipModalOpen] = useState(false);
+  const [isSubModalOpen, setIsSubModalOpen] = useState(false);
+
+  // Forms
+  const [lsxForm, setLsxForm] = useState({
+    code: '',
+    so_id: '',
+    part_name: '',
+    drawing_code: '',
+    target_qty: 50,
+    current_step: 'Cắt phôi',
+  });
+
+  const [wipForm, setWipForm] = useState({
+    production_order_id: '',
+    from_step: 'Phay CNC mặt chuẩn',
+    to_step: 'Tiện CNC chi tiết',
+    operator: '',
+    machine_name: '',
+    qty_passed: 10,
+    qty_failed: 0,
+    fail_reason: '',
+  });
+
+  const [subForm, setSubForm] = useState({
+    production_order_id: '',
+    vendor_name: '',
+    process_type: 'Anode nhôm đen cứng',
+    part_name: '',
+    send_qty: 50,
+    unit_cost: 35000,
+    promise_date: '',
+  });
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [resLsx, resWip, resSub, resSo] = await Promise.all([
+        api.get('/production/orders'),
+        api.get('/production/wip-movements'),
+        api.get('/production/subcontracting'),
+        api.get('/sales/orders').catch(() => ({ data: [] })),
+      ]);
+      setOrders(resLsx.data || []);
+      setMovements(resWip.data || []);
+      setSubcontracts(resSub.data || []);
+      setSalesOrders(resSo?.data?.data || resSo?.data || []);
+    } catch (err) {
+      console.error('Failed to load production data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleSelectSoForLsx = (soId) => {
+    if (!soId) {
+      setLsxForm((prev) => ({ ...prev, so_id: '' }));
+      return;
+    }
+    const found = salesOrders.find((s) => String(s.id) === String(soId));
+    if (found) {
+      setLsxForm((prev) => ({
+        ...prev,
+        so_id: found.id,
+        part_name: found.part_name || prev.part_name,
+        drawing_code: found.drawing_code || prev.drawing_code,
+        target_qty: Number(found.order_qty) || prev.target_qty,
+      }));
+    }
+  };
+
+  const handleSelectLsxForWip = (lsxId) => {
+    if (!lsxId) {
+      setWipForm((prev) => ({ ...prev, production_order_id: '' }));
+      return;
+    }
+    const found = orders.find((o) => String(o.id) === String(lsxId));
+    if (found) {
+      const remaining = Math.max(1, (Number(found.target_qty) || 0) - (Number(found.completed_qty) || 0));
+      setWipForm((prev) => ({
+        ...prev,
+        production_order_id: found.id,
+        from_step: found.current_step || prev.from_step,
+        qty_passed: remaining,
+      }));
+    }
+  };
+
+  const handleSelectLsxForSub = (lsxId) => {
+    if (!lsxId) {
+      setSubForm((prev) => ({ ...prev, production_order_id: '' }));
+      return;
+    }
+    const found = orders.find((o) => String(o.id) === String(lsxId));
+    if (found) {
+      const remaining = Math.max(1, (Number(found.target_qty) || 0) - (Number(found.ng_qty) || 0));
+      setSubForm((prev) => ({
+        ...prev,
+        production_order_id: found.id,
+        part_name: found.part_name || prev.part_name,
+        send_qty: remaining,
+      }));
+    }
+  };
+
+  const handleCreateLsx = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/production/orders', lsxForm);
+      setIsLsxModalOpen(false);
+      setLsxForm({
+        code: '',
+        so_id: '',
+        part_name: '',
+        drawing_code: '',
+        target_qty: 50,
+        current_step: 'Cắt phôi',
+      });
+      loadData();
+      showSuccess('Tạo LSX thành công', `Lệnh sản xuất ${lsxForm.code || ''} cho chi tiết ${lsxForm.part_name} đã được khởi tạo.`);
+    } catch (err) {
+      showError('Lỗi tạo LSX', err.message);
+    }
+  };
+
+  const handleCreateWip = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/production/wip-movements', wipForm);
+      setIsWipModalOpen(false);
+      loadData();
+      showSuccess('Luân chuyển BTP thành công', 'Phiếu chuyển công đoạn và kiểm tra NG đã được lưu.');
+    } catch (err) {
+      showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleCreateSubcontract = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/production/subcontracting', subForm);
+      setIsSubModalOpen(false);
+      loadData();
+      showSuccess('Gửi gia công ngoài thành công', `Đã lập phiếu gửi gia công chi tiết ${subForm.part_name} tới ${subForm.vendor_name}.`);
+    } catch (err) {
+      showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleReceiveSubcontract = async (subId) => {
+    const qty = prompt('Nhập số lượng hàng nhận về từ xưởng gia công ngoài:');
+    if (!qty) return;
+    try {
+      await api.patch(`/production/subcontracting/${subId}`, {
+        status: 'received',
+        received_qty: Number(qty),
+        qc_passed_qty: Number(qty),
+      });
+      loadData();
+      showSuccess('Nhận hàng gia công thành công', 'Đã cập nhật số lượng nhập kho QC đạt chuẩn.');
+    } catch (err) {
+      showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleHandoverLsx = (lsx) => {
+    const remain = Math.max(1, (Number(lsx.target_qty) || 0) - (Number(lsx.completed_qty) || 0));
+    confirmDelete({
+      title: 'QC Nghiệm Thu & Bàn Giao Thành Phẩm',
+      itemName: lsx.code + ' (' + lsx.part_name + ')',
+      message: 'Bộ phận Sản xuất & QC xác nhận đã hoàn thành ' + remain + ' chi tiết đạt chuẩn kỹ thuật và bàn giao nhập kho thành phẩm cho Đơn hàng SO?',
+      confirmText: 'Bàn giao nhập kho',
+      onConfirm: async () => {
+        try {
+          await api.post('/production/orders/' + lsx.id + '/handover-finished', { qty: remain });
+          showSuccess('Bàn giao thành phẩm thành công!', 'Đã nhập kho thành phẩm ' + remain + ' chi tiết. Thủ kho và Sales hiện đã có thể làm thủ tục xuất hàng.');
+          loadData();
+        } catch (err) {
+          showError('Lỗi bàn giao', err.response?.data?.message || err.message);
+        }
+      },
+    });
+  };
+
+  const handleDeleteLsx = (lsxId) => {
+    confirmDelete({
+      title: 'Xác Nhận Xóa Lệnh Sản Xuất (LSX)',
+      itemName: 'Lệnh sản xuất #' + lsxId,
+      message: 'Bạn có chắc chắn muốn xóa Lệnh sản xuất (LSX) này không?',
+      onConfirm: async () => {
+        try {
+          await api.delete('/production/orders/' + lsxId);
+          showSuccess('Đã xóa thành công!', 'Lệnh sản xuất LSX đã được xóa khỏi hệ thống.');
+          loadData();
+        } catch (err) {
+          showError('Lỗi xóa LSX', err.response?.data?.message || err.message);
+        }
+      },
+    });
+  };
+
+  const handleDeleteWip = (wipId) => {
+    confirmDelete({
+      title: 'Xác Nhận Xóa Phiếu Luân Chuyển BTP',
+      itemName: 'Phiếu BTP #' + wipId,
+      message: 'Bạn có chắc chắn muốn xóa Phiếu luân chuyển BTP này không?',
+      onConfirm: async () => {
+        try {
+          await api.delete('/production/wip-movements/' + wipId);
+          showSuccess('Đã xóa thành công!', 'Phiếu luân chuyển BTP đã được xóa khỏi hệ thống.');
+          loadData();
+        } catch (err) {
+          showError('Lỗi xóa phiếu BTP', err.response?.data?.message || err.message);
+        }
+      },
+    });
+  };
+
+  const handleDeleteSubcontract = (subId) => {
     confirmDelete({
       title: 'Xác Nhận Xóa Phiếu Gia Công Ngoài',
       itemName: 'Phiếu gia công #' + subId,
@@ -119,11 +342,6 @@ export default function ProductionModule({ initialSubTab }) {
           {subTab === 'subcontract' && canManageProduction && (
             <Button size="md" icon={Truck} onClick={() => setIsSubModalOpen(true)}>
               Gửi gia công ngoài
-            </Button>
-          )}
-          {subTab === 'workshops' && canManageProduction && (
-            <Button size="md" icon={Plus} onClick={handleOpenAddWorkshop}>
-              Thêm phân xưởng mới
             </Button>
           )}
         </div>
@@ -547,195 +765,6 @@ export default function ProductionModule({ initialSubTab }) {
           />
         </form>
       </Modal>
-
-      {/* Add Workshop Modal */}
-      {isAddWorkshopOpen && (
-        <Modal
-          isOpen={isAddWorkshopOpen}
-          onClose={() => setIsAddWorkshopOpen(false)}
-          title="Thêm Phân Xưởng CNC Mới"
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setIsAddWorkshopOpen(false)}>Hủy</Button>
-              <Button variant="primary" onClick={handleCreateWorkshop} icon={Plus}>Lưu Phân Xưởng</Button>
-            </>
-          }
-        >
-          <form className="space-y-4" onSubmit={handleCreateWorkshop}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Mã phân xưởng"
-                placeholder="VD: X-04"
-                value={workshopForm.code}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, code: e.target.value })}
-                required
-              />
-              <Input
-                label="Tên phân xưởng"
-                placeholder="VD: Xưởng D (Nhiệt luyện & Mạ màu)"
-                value={workshopForm.name}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, name: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Quản đốc / Phụ trách xưởng"
-                placeholder="VD: Lê Văn Sản Xuất"
-                value={workshopForm.manager_name}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, manager_name: e.target.value })}
-              />
-              <Input
-                label="Số điện thoại liên hệ"
-                placeholder="VD: 0918112233"
-                value={workshopForm.phone}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, phone: e.target.value })}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Số lượng máy CNC"
-                type="number"
-                value={workshopForm.machine_count}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, machine_count: Number(e.target.value) })}
-                required
-              />
-              <Input
-                label="Số lượng thợ / kỹ sư"
-                type="number"
-                value={workshopForm.operator_count}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, operator_count: Number(e.target.value) })}
-                required
-              />
-            </div>
-
-            <Input
-              label="Dàn máy thiết bị chính"
-              placeholder="VD: 3 Máy Phay CNC Mazak, 2 Máy Tiện Doosan..."
-              value={workshopForm.main_machines}
-              onChange={(e) => setWorkshopForm({ ...workshopForm, main_machines: e.target.value })}
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Vị trí / Khu xưởng"
-                placeholder="VD: Khu xưởng 1 - Nhà A"
-                value={workshopForm.location}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, location: e.target.value })}
-              />
-              <Select
-                label="Trạng thái hoạt động"
-                value={workshopForm.status}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, status: e.target.value })}
-                options={[
-                  { value: 'active', label: 'Đang hoạt động' },
-                  { value: 'inactive', label: 'Tạm dừng hoạt động' },
-                ]}
-              />
-            </div>
-
-            <Input
-              label="Mô tả / Năng lực gia công"
-              placeholder="VD: Chuyên gia công phôi thép cứng, phay 4 trục..."
-              value={workshopForm.description}
-              onChange={(e) => setWorkshopForm({ ...workshopForm, description: e.target.value })}
-            />
-          </form>
-        </Modal>
-      )}
-
-      {/* Edit Workshop Modal */}
-      {isEditWorkshopOpen && (
-        <Modal
-          isOpen={isEditWorkshopOpen}
-          onClose={() => setIsEditWorkshopOpen(false)}
-          title={`Chỉnh Sửa Phân Xưởng: ${selectedWorkshop?.name || ''}`}
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setIsEditWorkshopOpen(false)}>Hủy</Button>
-              <Button variant="primary" onClick={handleUpdateWorkshop} icon={Pencil}>Cập Nhật</Button>
-            </>
-          }
-        >
-          <form className="space-y-4" onSubmit={handleUpdateWorkshop}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Mã phân xưởng"
-                value={workshopForm.code}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, code: e.target.value })}
-                required
-              />
-              <Input
-                label="Tên phân xưởng"
-                value={workshopForm.name}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, name: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Quản đốc / Phụ trách xưởng"
-                value={workshopForm.manager_name}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, manager_name: e.target.value })}
-              />
-              <Input
-                label="Số điện thoại liên hệ"
-                value={workshopForm.phone}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, phone: e.target.value })}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Số lượng máy CNC"
-                type="number"
-                value={workshopForm.machine_count}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, machine_count: Number(e.target.value) })}
-                required
-              />
-              <Input
-                label="Số lượng thợ / kỹ sư"
-                type="number"
-                value={workshopForm.operator_count}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, operator_count: Number(e.target.value) })}
-                required
-              />
-            </div>
-
-            <Input
-              label="Dàn máy thiết bị chính"
-              value={workshopForm.main_machines}
-              onChange={(e) => setWorkshopForm({ ...workshopForm, main_machines: e.target.value })}
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Vị trí / Khu xưởng"
-                value={workshopForm.location}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, location: e.target.value })}
-              />
-              <Select
-                label="Trạng thái hoạt động"
-                value={workshopForm.status}
-                onChange={(e) => setWorkshopForm({ ...workshopForm, status: e.target.value })}
-                options={[
-                  { value: 'active', label: 'Đang hoạt động' },
-                  { value: 'inactive', label: 'Tạm dừng hoạt động' },
-                ]}
-              />
-            </div>
-
-            <Input
-              label="Mô tả / Năng lực gia công"
-              value={workshopForm.description}
-              onChange={(e) => setWorkshopForm({ ...workshopForm, description: e.target.value })}
-            />
-          </form>
-        </Modal>
-      )}
     </div>
   );
 }
