@@ -13,11 +13,14 @@ router.get('/advances', financeController.getAdvances);
 router.post('/advances', validateBody(['requester', 'purpose', 'amount']), financeController.createAdvance);
 // Only Admin can approve or delete advances
 router.patch('/advances/:id/approve', authorizeRoles('admin'), financeController.approveAdvance);
+router.patch('/advances/:id/reject', authorizeRoles('admin'), financeController.rejectAdvance);
 router.delete('/advances/:id', authorizeRoles('admin'), financeController.deleteAdvance);
 
 // Payments (Thanh toán): Restricted to accountant & admin
 router.get('/payments', authorizeRoles('accountant'), financeController.getPayments);
 router.post('/payments', authorizeRoles('accountant'), validateBody(['recipient', 'category', 'gross_amount']), financeController.createPayment);
+router.patch('/payments/:id/approve', authorizeRoles('admin'), financeController.approvePayment);
+router.patch('/payments/:id/reject', authorizeRoles('admin'), financeController.rejectPayment);
 router.delete('/payments/:id', authorizeRoles('admin'), financeController.deletePayment);
 
 // Debts (Công nợ): Restricted to accountant & admin

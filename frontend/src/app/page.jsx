@@ -76,6 +76,8 @@ export default function DashboardPage() {
   const [lowStockAlerts, setLowStockAlerts] = useState([]);
   const [subcontracts, setSubcontracts] = useState([]);
   const [dashboardStats, setDashboardStats] = useState(null);
+  const [workshops, setWorkshops] = useState([]);
+  const [selectedWorkshopId, setSelectedWorkshopId] = useState(null);
   const [loading, setLoading] = useState(false);
 
   // Filters for Pending Tasks on Dashboard
@@ -99,13 +101,16 @@ export default function DashboardPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [resAdv, resQuotes, resOrders, resStock, resSub, resStats] = await Promise.allSettled([
+      const [resAdv, resQuotes, resOrders, resStock, resSub, resStats, resWorkshops, resDeliveries, resPayments] = await Promise.allSettled([
         api.get('/finance/advances'),
         api.get('/sales/quotations'),
         api.get('/sales/orders'),
         api.get('/inventory/materials/alerts/low-stock'),
         api.get('/production/subcontracting'),
         api.get('/reports/dashboard'),
+        api.get('/workshops'),
+        api.get('/sales/delivery-notes'),
+        api.get('/finance/payments'),
       ]);
 
       const advances = resAdv.status === 'fulfilled' ? (resAdv.value.data || []) : [];
@@ -113,9 +118,16 @@ export default function DashboardPage() {
       const orders = resOrders.status === 'fulfilled' ? (resOrders.value.data || []) : [];
       const lowStock = resStock.status === 'fulfilled' ? (resStock.value.data || []) : [];
       const subs = resSub.status === 'fulfilled' ? (resSub.value.data || []) : [];
+      const wsList = resWorkshops.status === 'fulfilled' ? (resWorkshops.value.data || []) : [];
+      const deliveries = resDeliveries.status === 'fulfilled' ? (resDeliveries.value.data || []) : [];
+      const payments = resPayments.status === 'fulfilled' ? (resPayments.value.data || []) : [];
 
       setLowStockAlerts(lowStock);
       setSubcontracts(subs);
+      setWorkshops(wsList);
+      if (wsList.length > 0 && !selectedWorkshopId) {
+        setSelectedWorkshopId(wsList[0].id);
+      }
       setDashboardStats(resStats.status === 'fulfilled' ? resStats.value.data : null);
 
       // Pending action items specifically for CNC Shop
@@ -172,6 +184,40 @@ export default function DashboardPage() {
           });
         });
 
+      // Delivery Notes awaiting warehouse inspection & export
+      deliveries
+        .filter((d) => d.status === 'pending_warehouse')
+        .forEach((d) => {
+          tasks.push({
+            id: d.id,
+            category: 'Phiếu XK chờ kiểm hàng & xuất kho',
+            tagColor: 'bg-amber-50 text-amber-700 border-amber-200',
+            title: `Xuất ${d.delivery_qty} chi tiết cho khách hàng ${d.customer_name}`,
+            requester: d.created_by || 'Bộ phận Kinh doanh',
+            time: new Date(d.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            date: new Date(d.created_at).toLocaleDateString('vi-VN'),
+            amount: `${d.delivery_qty} chi tiết`,
+            actionType: 'delivery',
+          });
+        });
+
+      // Payment Requests awaiting Admin approval
+      payments
+        .filter((p) => p.status === 'pending')
+        .forEach((p) => {
+          tasks.push({
+            id: p.id,
+            category: 'Đề nghị thanh toán chi tiền',
+            tagColor: 'bg-purple-50 text-purple-700 border-purple-200',
+            title: `Chi tiền cho ${p.recipient} (${p.category})`,
+            requester: 'Bộ phận Kế toán',
+            time: new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            date: new Date(p.created_at).toLocaleDateString('vi-VN'),
+            amount: `${Number(p.net_amount).toLocaleString()} đ`,
+            actionType: 'payment',
+          });
+        });
+
       setPendingTasks(tasks);
       setActiveOrders(orders);
     } catch (err) {
@@ -204,15 +250,55 @@ export default function DashboardPage() {
       } catch (err) {
         showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
       }
+    } else if (task.actionType === 'payment') {
+      try {
+        await api.patch(`/finance/payments/${task.id}/approve`);
+        showSuccess('Duyệt chi thành công!', 'Phiếu thanh toán đã được phê duyệt chi tiền.');
+        loadData();
+      } catch (err) {
+        showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
+      }
+    } else if (task.actionType === 'delivery') {
+      try {
+        await api.post(`/sales/delivery-notes/${task.id}/confirm-export`);
+        showSuccess('Xuất kho thành công!', 'Đã xác nhận kiểm hàng và xuất kho thành công.');
+        loadData();
+      } catch (err) {
+        showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
+      }
+    } else if (task.actionType === 'subcontract') {
+      try {
+        await api.patch(`/production/subcontracting/${task.id}`, {
+          status: 'received',
+          received_qty: 50,
+          qc_passed_qty: 50,
+        });
+        showSuccess('Nghiệm thu thành công!', 'Đã nhận hàng gia công ngoài về kho.');
+        loadData();
+      } catch (err) {
+        showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
+      }
     } else {
       setPendingTasks(pendingTasks.filter((t) => t.id !== task.id));
       showSuccess('Xử lý thành công!', 'Đã hoàn thành công việc được giao.');
     }
   };
 
-  const handleReject = (task) => {
-    setPendingTasks(pendingTasks.filter((t) => t.id !== task.id));
-    showSuccess('Từ chối công việc', 'Nhiệm vụ đã được cập nhật trạng thái từ chối.');
+  const handleReject = async (task) => {
+    try {
+      if (task.actionType === 'advance') {
+        await api.patch(`/finance/advances/${task.id}/reject`);
+      } else if (task.actionType === 'quotation') {
+        await api.post(`/sales/quotations/${task.id}/reject`);
+      } else if (task.actionType === 'payment') {
+        await api.patch(`/finance/payments/${task.id}/reject`);
+      }
+      showSuccess('Đã từ chối!', 'Yêu cầu đã được cập nhật trạng thái từ chối trong hệ thống.');
+      loadData();
+    } catch (err) {
+      setPendingTasks(pendingTasks.filter((t) => t.id !== task.id));
+      showSuccess('Từ chối công việc', 'Nhiệm vụ đã được cập nhật.');
+    }
   };
 
   const fetchUsers = async () => {
@@ -1072,9 +1158,9 @@ export default function DashboardPage() {
                             </p>
                           </div>
 
-                          <div className="w-full sm:w-48 self-start sm:self-center mt-2 sm:mt-0">
+                          <div className="w-full sm:w-64 shrink-0 self-start sm:self-center mt-2 sm:mt-0">
                             <div className="flex justify-between text-xs mb-1">
-                              <span className="text-slate-600">Đã giao: {order.delivered_qty}/{order.order_qty}</span>
+                              <span className="text-slate-600 font-medium">Đã giao: {order.delivered_qty}/{order.order_qty}</span>
                               <span className="font-bold text-blue-600">{percent}%</span>
                             </div>
                             <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
@@ -1083,8 +1169,8 @@ export default function DashboardPage() {
                                 style={{ width: `${percent}%` }}
                               />
                             </div>
-                            <div className="text-[11px] text-slate-400 mt-1 flex justify-between">
-                              <span>Dở dang WIP: {order.wip_qty}</span>
+                            <div className="text-[11px] text-slate-500 mt-1.5 flex items-center justify-between gap-3">
+                              <span>Dở dang WIP: <strong className="text-slate-700">{order.wip_qty}</strong></span>
                               <Badge status={order.status}>{order.status}</Badge>
                             </div>
                           </div>
@@ -1108,41 +1194,88 @@ export default function DashboardPage() {
                     </span>
                   </div>
 
-                  <div className="py-2.5 text-xs text-slate-600">
-                    Khu vực: <strong className="text-slate-900">Xưởng A (Phay Mazak, Tiện Doosan)</strong>
+                  <div className="py-2.5">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="text-xs text-slate-500 font-medium">Chọn phân xưởng CNC:</span>
+                      <button
+                        onClick={() => setActiveNav('production')}
+                        className="text-[11px] text-blue-600 hover:underline font-semibold"
+                      >
+                        Quản lý xưởng ➔
+                      </button>
+                    </div>
+                    <select
+                      value={selectedWorkshopId || (workshops[0]?.id || '')}
+                      onChange={(e) => setSelectedWorkshopId(Number(e.target.value))}
+                      className="w-full px-3 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    >
+                      {workshops.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.code} - {w.name} ({w.machine_count} máy | {w.operator_count} thợ)
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
-                  {/* 3 Metrics Boxes */}
-                  <div className="grid grid-cols-3 gap-2.5 my-3">
-                    {/* Box 1: Máy chạy */}
-                    <div className="bg-emerald-50/70 border border-emerald-100 rounded-xl p-2.5 text-center">
-                      <span className="text-[11px] text-emerald-700 font-semibold block">Máy chạy</span>
-                      <span className="text-sm font-bold text-emerald-900 mt-0.5 block">
-                        {dashboardStats ? dashboardStats.production.active_lsx_count : '2'} / 5 máy
-                      </span>
-                      <span className="text-[9px] text-emerald-600 mt-0.5 block">Đang gia công</span>
-                    </div>
+                  {(() => {
+                    const currentWs = workshops.find(w => w.id === selectedWorkshopId) || workshops[0] || {
+                      name: 'Xưởng A (Phay Mazak, Tiện Doosan)',
+                      manager_name: 'Lê Văn Sản Xuất',
+                      machine_count: 5,
+                      operator_count: 8,
+                      main_machines: '3 Máy Phay CNC Mazak VCN-530C, 2 Máy Tiện Doosan Lynx 220',
+                      location: 'Khu xưởng 1 - Nhà A',
+                      status: 'active'
+                    };
 
-                    {/* Box 2: Tỷ lệ Lỗi NG */}
-                    <div className="bg-rose-50/70 border border-rose-100 rounded-xl p-2.5 text-center">
-                      <span className="text-[11px] text-rose-700 font-semibold block">Tỷ lệ NG</span>
-                      <span className="text-sm font-bold text-rose-900 mt-0.5 block">
-                        {dashboardStats ? `${dashboardStats.production.ng_rate_percent}%` : '2%'}
-                      </span>
-                      <span className="text-[9px] text-rose-500 mt-0.5 block">
-                        {dashboardStats ? `${dashboardStats.production.ng_qty} phế phẩm` : '3 lỗi'}
-                      </span>
-                    </div>
+                    return (
+                      <>
+                        <div className="p-2.5 bg-slate-50 rounded-xl text-xs space-y-1 mb-2 border border-slate-100">
+                          <div className="flex justify-between text-slate-600">
+                            <span>Quản đốc: <strong className="text-slate-800">{currentWs.manager_name}</strong></span>
+                            <span className="text-slate-400 font-mono">{currentWs.phone || ''}</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 truncate" title={currentWs.main_machines}>
+                            Máy chính: {currentWs.main_machines}
+                          </p>
+                        </div>
 
-                    {/* Box 3: Tồn kho thiếu */}
-                    <div className="bg-amber-50/70 border border-amber-100 rounded-xl p-2.5 text-center">
-                      <span className="text-[11px] text-amber-700 font-semibold block">Vật tư thiếu</span>
-                      <span className="text-sm font-bold text-amber-900 mt-0.5 block">
-                        {lowStockAlerts.length} mã
-                      </span>
-                      <span className="text-[9px] text-amber-600 mt-0.5 block">Dưới mức min</span>
-                    </div>
-                  </div>
+                        {/* 3 Metrics Boxes */}
+                        <div className="grid grid-cols-3 gap-2.5 my-3">
+                          {/* Box 1: Máy chạy */}
+                          <div className="bg-emerald-50/70 border border-emerald-100 rounded-xl p-2.5 text-center">
+                            <span className="text-[11px] text-emerald-700 font-semibold block">Máy chạy</span>
+                            <span className="text-sm font-bold text-emerald-900 mt-0.5 block">
+                              {dashboardStats ? dashboardStats.production.active_lsx_count : '2'} / {currentWs.machine_count} máy
+                            </span>
+                            <span className="text-[9px] text-emerald-600 mt-0.5 block">Đang gia công</span>
+                          </div>
+
+                          {/* Box 2: Tỷ lệ Lỗi NG */}
+                          <div className="bg-rose-50/70 border border-rose-100 rounded-xl p-2.5 text-center">
+                            <span className="text-[11px] text-rose-700 font-semibold block">Tỷ lệ NG</span>
+                            <span className="text-sm font-bold text-rose-900 mt-0.5 block">
+                              {dashboardStats ? `${dashboardStats.production.ng_rate_percent}%` : '2%'}
+                            </span>
+                            <span className="text-[9px] text-rose-500 mt-0.5 block">
+                              {dashboardStats ? `${dashboardStats.production.ng_qty} phế phẩm` : '3 lỗi'}
+                            </span>
+                          </div>
+
+                          {/* Box 3: Nhân lực */}
+                          <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-2.5 text-center">
+                            <span className="text-[11px] text-blue-700 font-semibold block">Thợ máy</span>
+                            <span className="text-sm font-bold text-blue-900 mt-0.5 block">
+                              {currentWs.operator_count} thợ
+                            </span>
+                            <span className="text-[9px] text-blue-600 mt-0.5 block">
+                              {currentWs.status === 'active' ? 'Hoạt động' : 'Bảo trì'}
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
 
                   {/* Fast Action Buttons */}
                   <div className="grid grid-cols-2 gap-2 mt-4">

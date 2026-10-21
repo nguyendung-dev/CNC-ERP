@@ -14,7 +14,11 @@ class FinanceService {
   }
 
   async approveAdvance(id, approverName) {
-    return await financeRepo.updateAdvanceStatus(id, 'approved', approverName || 'Giám Đốc Kỹ Thuật');
+    return await financeRepo.updateAdvanceStatus(id, 'approved', approverName || 'Ban Giám Đốc');
+  }
+
+  async rejectAdvance(id, approverName) {
+    return await financeRepo.updateAdvanceStatus(id, 'rejected', approverName || 'Ban Giám Đốc');
   }
 
   // Payments
@@ -26,7 +30,18 @@ class FinanceService {
     if (!data.code) {
       data.code = `TT-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`;
     }
+    if (!data.status) {
+      data.status = 'pending';
+    }
     return await financeRepo.createPayment(data);
+  }
+
+  async approvePayment(id) {
+    return await financeRepo.updatePaymentStatus(id, 'paid');
+  }
+
+  async rejectPayment(id) {
+    return await financeRepo.updatePaymentStatus(id, 'cancelled');
   }
 
   // Debts

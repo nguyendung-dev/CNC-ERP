@@ -376,7 +376,7 @@ UPDATE sales_orders SET delivered_qty = 98, status = 'completed' WHERE code = 'S
                 ("Người thực hiện", "Ban giám đốc, Kế toán trưởng, Quản trị viên (admin)."),
                 ("Màn hình", "Vào phân hệ 'Báo cáo'."),
                 ("Xem số liệu KPI tự động", "- Tổng doanh thu đơn hàng SO: 41.6 triệu VNĐ (1 đơn)\n- Số chi tiết đã giao: 98 / 100 chiếc (tỷ lệ giao hàng: 98%)\n- Tỷ lệ phế phẩm lỗi NG: 2.0% (2 chiếc lỗi phay rãnh then)\n- Chi phí gia công ngoài Anode: 2.744 triệu VNĐ\n- Công nợ phải thu / phải trả: Đều đã thu hồi và thanh toán 100% (Dư nợ = 0 VNĐ)\n- Lợi nhuận gộp ước tính: 15,556,000 VNĐ (Biên lợi nhuận: 37.4%)."),
-                ("Thao tác xuất file", "Bấm nút lớn [📥 Xuất Báo Cáo Excel Quản Trị (XLSX)]. Trình duyệt lập tức tải về file Bao_Cao_Tong_Quan_CNC_ERP_2026-10-16.xlsx với đầy đủ các chỉ số thống kê.")
+                ("Thao tác xuất file", "Bấm nút lớn [📥 Xuất Báo Cáo Excel]. Trình duyệt lập tức tải về file Bao_Cao_Tong_Quan_CNC_ERP_2026-10-16.xlsx với đầy đủ các chỉ số thống kê.")
             ],
             "db_impact": {
                 "table": "TỔNG HỢP TRỰC TIẾP TỪ TẤT CẢ CÁC BẢNG (READ-ONLY)",

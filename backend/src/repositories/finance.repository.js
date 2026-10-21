@@ -41,6 +41,11 @@ class FinanceRepository {
     return rows[0] || null;
   }
 
+  async updatePaymentStatus(id, status) {
+    await pool.query('UPDATE payment_requests SET status = ? WHERE id = ?', [status, id]);
+    return this.getPaymentById(id);
+  }
+
   async createPayment(data) {
     const { code, recipient, category, gross_amount, deduct_advance_amount, status, note } = data;
     const gross = Number(gross_amount) || 0;

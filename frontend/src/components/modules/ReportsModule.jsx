@@ -80,7 +80,7 @@ export default function ReportsModule() {
         </div>
 
         <ExportButton onClick={handleExportFullReport}>
-          Xuất Báo Cáo Excel Quản Trị (XLSX)
+          Xuất Báo Cáo Excel
         </ExportButton>
       </div>
 

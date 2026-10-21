@@ -8,7 +8,9 @@ import {
   AlertOctagon, 
   Truck, 
   CheckCircle2, 
-  Settings, 
+  Settings,
+  Building2,
+  Pencil, 
   ExternalLink,
   Trash2
 } from 'lucide-react';
@@ -26,12 +28,30 @@ export default function ProductionModule() {
   const { showSuccess, showError, confirmDelete } = useToast();
   const { user } = useAuth();
   const canManageProduction = user?.role === 'admin' || user?.role === 'production';
-  const [subTab, setSubTab] = useState('lsx'); // 'lsx' | 'wip' | 'subcontract'
+  const [subTab, setSubTab] = useState('lsx'); // 'lsx' | 'wip' | 'subcontract' | 'workshops'
   const [orders, setOrders] = useState([]);
   const [movements, setMovements] = useState([]);
   const [subcontracts, setSubcontracts] = useState([]);
+  const [workshops, setWorkshops] = useState([]);
   const [salesOrders, setSalesOrders] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Workshop modals & forms
+  const [isAddWorkshopOpen, setIsAddWorkshopOpen] = useState(false);
+  const [isEditWorkshopOpen, setIsEditWorkshopOpen] = useState(false);
+  const [selectedWorkshop, setSelectedWorkshop] = useState(null);
+  const [workshopForm, setWorkshopForm] = useState({
+    code: '',
+    name: '',
+    manager_name: '',
+    phone: '',
+    machine_count: 5,
+    operator_count: 8,
+    main_machines: '',
+    location: '',
+    status: 'active',
+    description: '',
+  });
 
   // Modals
   const [isLsxModalOpen, setIsLsxModalOpen] = useState(false);
@@ -257,6 +277,85 @@ export default function ProductionModule() {
     });
   };
 
+  const handleOpenAddWorkshop = () => {
+    setWorkshopForm({
+      code: 'X-' + Date.now().toString().slice(-3),
+      name: '',
+      manager_name: '',
+      phone: '',
+      machine_count: 4,
+      operator_count: 6,
+      main_machines: '',
+      location: '',
+      status: 'active',
+      description: '',
+    });
+    setIsAddWorkshopOpen(true);
+  };
+
+  const handleOpenEditWorkshop = (ws) => {
+    setSelectedWorkshop(ws);
+    setWorkshopForm({
+      code: ws.code,
+      name: ws.name,
+      manager_name: ws.manager_name || '',
+      phone: ws.phone || '',
+      machine_count: ws.machine_count || 1,
+      operator_count: ws.operator_count || 1,
+      main_machines: ws.main_machines || '',
+      location: ws.location || '',
+      status: ws.status || 'active',
+      description: ws.description || '',
+    });
+    setIsEditWorkshopOpen(true);
+  };
+
+  const handleCreateWorkshop = async (e) => {
+    e.preventDefault();
+    if (!workshopForm.name.trim()) {
+      showError('Thiếu thông tin', 'Vui lòng nhập tên phân xưởng.');
+      return;
+    }
+    try {
+      await api.post('/workshops', workshopForm);
+      setIsAddWorkshopOpen(false);
+      loadData();
+      showSuccess('Thêm xưởng thành công!', 'Phân xưởng "' + workshopForm.name + '" đã được tạo.');
+    } catch (err) {
+      showError('Lỗi thêm xưởng', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleUpdateWorkshop = async (e) => {
+    e.preventDefault();
+    if (!selectedWorkshop) return;
+    try {
+      await api.put('/workshops/' + selectedWorkshop.id, workshopForm);
+      setIsEditWorkshopOpen(false);
+      loadData();
+      showSuccess('Cập nhật thành công!', 'Thông tin phân xưởng đã được cập nhật.');
+    } catch (err) {
+      showError('Lỗi cập nhật xưởng', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleDeleteWorkshop = (ws) => {
+    confirmDelete({
+      title: 'Xóa Phân Xưởng',
+      itemName: ws.name + ' (' + ws.code + ')',
+      message: 'Bạn có chắc chắn muốn xóa phân xưởng này khỏi hệ thống không?',
+      onConfirm: async () => {
+        try {
+          await api.delete('/workshops/' + ws.id);
+          showSuccess('Đã xóa thành công!', 'Phân xưởng "' + ws.name + '" đã được xóa khỏi hệ thống.');
+          loadData();
+        } catch (err) {
+          showError('Lỗi xóa phân xưởng', err.response?.data?.message || err.message);
+        }
+      },
+    });
+  };
+
   const handleDeleteSubcontract = (subId) => {
     confirmDelete({
       title: 'Xác Nhận Xóa Phiếu Gia Công Ngoài',
@@ -318,6 +417,19 @@ export default function ProductionModule() {
               {subcontracts.length}
             </span>
           </button>
+          <button
+            onClick={() => setSubTab('workshops')}
+            className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              subTab === 'workshops'
+                ? 'bg-white text-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+            }`}
+          >
+            <span>Phân Xưởng CNC</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${subTab === 'workshops' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'}`}>
+              {workshops.length}
+            </span>
+          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -334,6 +446,11 @@ export default function ProductionModule() {
           {subTab === 'subcontract' && canManageProduction && (
             <Button size="md" icon={Truck} onClick={() => setIsSubModalOpen(true)}>
               Gửi gia công ngoài
+            </Button>
+          )}
+          {subTab === 'workshops' && canManageProduction && (
+            <Button size="md" icon={Plus} onClick={handleOpenAddWorkshop}>
+              Thêm phân xưởng mới
             </Button>
           )}
         </div>

@@ -51,13 +51,8 @@ export const STATUS_LABELS = {
   inactive: 'Tạm khóa',
 };
 
-export const getStatusLabel = (status) => {
-  if (!status) return '';
-  return STATUS_LABELS[status] || status;
-};
-
 const statusStyles = {
-  // Thành công / Xanh lá
+  // Success / Emerald / Green
   approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   finished: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -65,18 +60,18 @@ const statusStyles = {
   passed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   in_stock: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   active: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  received: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   success: 'bg-emerald-50 text-emerald-700 border-emerald-200',
 
-  // Đang tiến hành / Xanh dương - Tím
-  running: 'bg-blue-50 text-blue-700 border-blue-200',
+  // Primary / Blue
   in_production: 'bg-blue-50 text-blue-700 border-blue-200',
-  sent: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  converted_to_so: 'bg-violet-50 text-violet-700 border-violet-200',
-  received: 'bg-teal-50 text-teal-700 border-teal-200',
+  running: 'bg-blue-50 text-blue-700 border-blue-200',
+  converted_to_so: 'bg-blue-50 text-blue-700 border-blue-200',
+  sent: 'bg-blue-50 text-blue-700 border-blue-200',
   processing: 'bg-blue-50 text-blue-700 border-blue-200',
   info: 'bg-blue-50 text-blue-700 border-blue-200',
 
-  // Cảnh báo / Chờ duyệt / Vàng cam
+  // Warning / Amber / Orange
   pending: 'bg-amber-50 text-amber-700 border-amber-200',
   partially_delivered: 'bg-amber-50 text-amber-700 border-amber-200',
   partially_paid: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -84,8 +79,9 @@ const statusStyles = {
   idle: 'bg-amber-50 text-amber-700 border-amber-200',
   rework: 'bg-amber-50 text-amber-700 border-amber-200',
   warning: 'bg-amber-50 text-amber-700 border-amber-200',
+  pending_warehouse: 'bg-amber-50 text-amber-700 border-amber-200',
 
-  // Nguy hiểm / Quá hạn / Thất bại / Đỏ
+  // Danger / Rose / Red
   unpaid: 'bg-rose-50 text-rose-700 border-rose-200',
   rejected: 'bg-rose-50 text-rose-700 border-rose-200',
   cancelled: 'bg-rose-50 text-rose-700 border-rose-200',
@@ -94,9 +90,9 @@ const statusStyles = {
   out_of_stock: 'bg-rose-50 text-rose-700 border-rose-200',
   danger: 'bg-rose-50 text-rose-700 border-rose-200',
 
-  // Trung tính / Nháp / Xám
+  // Neutral / Slate
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
-  inactive: 'bg-slate-100 text-slate-600 border-slate-200',
+  inactive: 'bg-slate-100 text-slate-700 border-slate-200',
   maintenance: 'bg-orange-50 text-orange-700 border-orange-200',
   paused: 'bg-slate-100 text-slate-700 border-slate-200',
   neutral: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -110,13 +106,13 @@ const dotColors = {
   passed: 'bg-emerald-500',
   in_stock: 'bg-emerald-500',
   active: 'bg-emerald-500',
+  received: 'bg-emerald-500',
   success: 'bg-emerald-500',
 
-  running: 'bg-blue-500',
   in_production: 'bg-blue-500',
-  sent: 'bg-indigo-500',
-  converted_to_so: 'bg-violet-500',
-  received: 'bg-teal-500',
+  running: 'bg-blue-500',
+  converted_to_so: 'bg-blue-500',
+  sent: 'bg-blue-500',
   processing: 'bg-blue-500',
   info: 'bg-blue-500',
 
@@ -127,6 +123,7 @@ const dotColors = {
   idle: 'bg-amber-500',
   rework: 'bg-amber-500',
   warning: 'bg-amber-500',
+  pending_warehouse: 'bg-amber-500',
 
   unpaid: 'bg-rose-500',
   rejected: 'bg-rose-500',
@@ -158,7 +155,7 @@ export default function Badge({ children, variant = 'neutral', status, showDot =
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${chosenStyle} ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap shrink-0 ${chosenStyle} ${className}`}
     >
       {showDot && (
         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${chosenDot}`} />
