@@ -22,7 +22,7 @@ import CurrencyInput from '../ui/CurrencyInput';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
-import { Input, Select } from '../ui/Input';
+import { Input, Select, Dropdown } from '../ui/Input';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -41,6 +41,42 @@ export const FACTORY_MACHINES = [
   'Máy Phay Cơ Vạn Năng Bridgeport',
   'Tổ Nguội, Khử Bavia & Lắp Ráp Jig',
   'Máy Đo 3D CMM Mitutoyo & Bàn Map',
+];
+
+export const FACTORY_MACHINE_GROUPS = [
+  {
+    label: 'Xưởng A - Phay Mazak & Tiện Doosan',
+    options: [
+      { value: 'Máy Phay CNC Mazak VCN-530C (#01)', label: 'Máy Phay CNC Mazak VCN-530C (#01)', badge: 'Phay 4 trục' },
+      { value: 'Máy Phay CNC Mazak VCN-530C (#02)', label: 'Máy Phay CNC Mazak VCN-530C (#02)', badge: 'Phay 4 trục' },
+      { value: 'Máy Phay CNC Mazak VCN-530C (#03)', label: 'Máy Phay CNC Mazak VCN-530C (#03)', badge: 'Phay 4 trục' },
+      { value: 'Máy Tiện CNC Doosan Lynx 220 (#01)', label: 'Máy Tiện CNC Doosan Lynx 220 (#01)', badge: 'Tiện CNC' },
+      { value: 'Máy Tiện CNC Doosan Lynx 220 (#02)', label: 'Máy Tiện CNC Doosan Lynx 220 (#02)', badge: 'Tiện CNC' },
+    ],
+  },
+  {
+    label: 'Xưởng B - Cắt Dây EDM & Mài Phẳng',
+    options: [
+      { value: 'Máy Cắt Dây CNC Sodick AQ327L (#01)', label: 'Máy Cắt Dây CNC Sodick AQ327L (#01)', badge: 'Cắt dây EDM' },
+      { value: 'Máy Cắt Dây CNC Sodick AQ327L (#02)', label: 'Máy Cắt Dây CNC Sodick AQ327L (#02)', badge: 'Cắt dây EDM' },
+      { value: 'Máy Mài Phẳng Okamoto ACC-DX (#01)', label: 'Máy Mài Phẳng Okamoto ACC-DX (#01)', badge: 'Mài phẳng' },
+      { value: 'Máy Mài Phẳng Okamoto ACC-DX (#02)', label: 'Máy Mài Phẳng Okamoto ACC-DX (#02)', badge: 'Mài phẳng' },
+    ],
+  },
+  {
+    label: 'Xưởng C - Cưa Phôi, Phay Cơ & Jig',
+    options: [
+      { value: 'Máy Cưa Vòng Amada HFA-300 Tự Động', label: 'Máy Cưa Vòng Amada HFA-300 Tự Động', badge: 'Cưa tự động' },
+      { value: 'Máy Phay Cơ Vạn Năng Bridgeport', label: 'Máy Phay Cơ Vạn Năng Bridgeport', badge: 'Phay cơ' },
+      { value: 'Tổ Nguội, Khử Bavia & Lắp Ráp Jig', label: 'Tổ Nguội, Khử Bavia & Lắp Ráp Jig', badge: 'Nguội & Jig' },
+    ],
+  },
+  {
+    label: 'KCS & Đo Lường',
+    options: [
+      { value: 'Máy Đo 3D CMM Mitutoyo & Bàn Map', label: 'Máy Đo 3D CMM Mitutoyo & Bàn Map', badge: 'Đo 3D CMM' },
+    ],
+  },
 ];
 
 export const STANDARD_CNC_STEPS = [
@@ -1346,17 +1382,9 @@ export default function ProductionModule({ initialSubTab }) {
                     {/* Thợ máy CNC & Tổ máy thực hiện (Dropdown thông minh + Nhập linh hoạt) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-semibold text-slate-700">
-                  Thợ máy CNC vận hành
-                </label>
-                {operators.length > 0 && (
-                  <span className="text-[10px] text-blue-600 font-semibold">
-                    ({operators.length} thợ máy)
-                  </span>
-                )}
-              </div>
-              <select
+              <Dropdown
+                label="Thợ máy CNC vận hành"
+                placeholder="-- Chọn thợ máy CNC phụ trách --"
                 value={operators.some((op) => op.name === wipForm.operator) ? wipForm.operator : (wipForm.operator ? '__custom__' : '')}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -1366,16 +1394,22 @@ export default function ProductionModule({ initialSubTab }) {
                     setWipForm(prev => ({ ...prev, operator: val }));
                   }
                 }}
-                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-              >
-                <option value="">-- Chọn thợ máy CNC phụ trách --</option>
-                {operators.map((op) => (
-                  <option key={op.id} value={op.name}>
-                    {op.code} - {op.name} ({op.skill_level})
-                  </option>
-                ))}
-                <option value="__custom__">✏️ Nhập tên thợ máy khác...</option>
-              </select>
+                options={operators.map((op) => ({
+                  value: op.name,
+                  label: `${op.code} - ${op.name}`,
+                  description: op.skill_level,
+                  badge: op.workshop_name ? op.workshop_name.split(' ')[0] : (op.workshop_code || undefined),
+                  group: op.workshop_name || 'Phân xưởng chung',
+                }))}
+                searchable={true}
+                customActions={[
+                  {
+                    label: '✏️ Nhập tên thợ máy khác...',
+                    value: '__custom__',
+                    onClick: () => setWipForm(prev => ({ ...prev, operator: '' })),
+                  },
+                ]}
+              />
               {(!operators.some((op) => op.name === wipForm.operator) || wipForm.operator === '') && (
                 <input
                   type="text"
@@ -1388,10 +1422,9 @@ export default function ProductionModule({ initialSubTab }) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Tổ máy CNC thực hiện
-              </label>
-              <select
+              <Dropdown
+                label="Tổ máy CNC thực hiện"
+                placeholder="-- Chọn tổ máy CNC thực hiện --"
                 value={FACTORY_MACHINES.some((m) => m === wipForm.machine_name) ? wipForm.machine_name : (wipForm.machine_name ? '__custom__' : '')}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -1401,32 +1434,16 @@ export default function ProductionModule({ initialSubTab }) {
                     setWipForm(prev => ({ ...prev, machine_name: val }));
                   }
                 }}
-                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-              >
-                <option value="">-- Chọn tổ máy CNC thực hiện --</option>
-                <optgroup label="Xưởng A - Phay Mazak & Tiện Doosan">
-                  <option value="Máy Phay CNC Mazak VCN-530C (#01)">Máy Phay CNC Mazak VCN-530C (#01)</option>
-                  <option value="Máy Phay CNC Mazak VCN-530C (#02)">Máy Phay CNC Mazak VCN-530C (#02)</option>
-                  <option value="Máy Phay CNC Mazak VCN-530C (#03)">Máy Phay CNC Mazak VCN-530C (#03)</option>
-                  <option value="Máy Tiện CNC Doosan Lynx 220 (#01)">Máy Tiện CNC Doosan Lynx 220 (#01)</option>
-                  <option value="Máy Tiện CNC Doosan Lynx 220 (#02)">Máy Tiện CNC Doosan Lynx 220 (#02)</option>
-                </optgroup>
-                <optgroup label="Xưởng B - Cắt Dây EDM & Mài Phẳng">
-                  <option value="Máy Cắt Dây CNC Sodick AQ327L (#01)">Máy Cắt Dây CNC Sodick AQ327L (#01)</option>
-                  <option value="Máy Cắt Dây CNC Sodick AQ327L (#02)">Máy Cắt Dây CNC Sodick AQ327L (#02)</option>
-                  <option value="Máy Mài Phẳng Okamoto ACC-DX (#01)">Máy Mài Phẳng Okamoto ACC-DX (#01)</option>
-                  <option value="Máy Mài Phẳng Okamoto ACC-DX (#02)">Máy Mài Phẳng Okamoto ACC-DX (#02)</option>
-                </optgroup>
-                <optgroup label="Xưởng C - Cưa Phôi, Phay Cơ & Jig">
-                  <option value="Máy Cưa Vòng Amada HFA-300 Tự Động">Máy Cưa Vòng Amada HFA-300 Tự Động</option>
-                  <option value="Máy Phay Cơ Vạn Năng Bridgeport">Máy Phay Cơ Vạn Năng Bridgeport</option>
-                  <option value="Tổ Nguội, Khử Bavia & Lắp Ráp Jig">Tổ Nguội, Khử Bavia & Lắp Ráp Jig</option>
-                </optgroup>
-                <optgroup label="KCS & Đo Lường">
-                  <option value="Máy Đo 3D CMM Mitutoyo & Bàn Map">Máy Đo 3D CMM Mitutoyo & Bàn Map</option>
-                </optgroup>
-                <option value="__custom__">✏️ Nhập tổ máy / thiết bị khác...</option>
-              </select>
+                groups={FACTORY_MACHINE_GROUPS}
+                searchable={true}
+                customActions={[
+                  {
+                    label: '✏️ Nhập tổ máy / thiết bị khác...',
+                    value: '__custom__',
+                    onClick: () => setWipForm(prev => ({ ...prev, machine_name: '' })),
+                  },
+                ]}
+              />
               {(!FACTORY_MACHINES.some((m) => m === wipForm.machine_name) || wipForm.machine_name === '') && (
                 <input
                   type="text"
@@ -1890,20 +1907,24 @@ export default function ProductionModule({ initialSubTab }) {
         <div className="space-y-4">
           {/* Filter & Search Bar */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">Lọc theo phân xưởng:</span>
-              <select
+            <div className="flex items-center gap-2 w-full sm:w-80">
+              <span className="text-xs font-semibold text-slate-600 whitespace-nowrap shrink-0">Phân xưởng:</span>
+              <Dropdown
+                size="sm"
                 value={operatorFilterWs}
                 onChange={(e) => setOperatorFilterWs(e.target.value)}
-                className="text-xs sm:text-sm px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              >
-                <option value="all">Tất cả phân xưởng ({operators.length} thợ)</option>
-                {workshops.map((w) => (
-                  <option key={w.id} value={String(w.id)}>
-                    {w.code} - {w.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: 'all', label: `Tất cả phân xưởng (${operators.length} thợ)` },
+                  ...workshops.map((w) => {
+                    const count = operators.filter((op) => op.workshop_id === w.id).length;
+                    return {
+                      value: String(w.id),
+                      label: `${w.code} - ${w.name}`,
+                      badge: `${count} thợ`,
+                    };
+                  }),
+                ]}
+              />
             </div>
             <div className="w-full sm:w-72">
               <input
@@ -2051,7 +2072,7 @@ export default function ProductionModule({ initialSubTab }) {
                   }
                 }}
               >
-                + Thêm Thợ Vào Xưởng
+                Thêm Thợ Vào Xưởng
               </Button>
               <Button
                 variant="outline"
@@ -2064,7 +2085,7 @@ export default function ProductionModule({ initialSubTab }) {
                 }}
                 className="text-emerald-700 border-emerald-200 hover:bg-emerald-50"
               >
-                + Thêm Công Đoạn Cho Xưởng
+                Thêm Công Đoạn Cho Xưởng
               </Button>
             </div>
             <Button variant="ghost" onClick={() => setIsWorkshopDetailOpen(false)}>
@@ -2122,7 +2143,7 @@ export default function ProductionModule({ initialSubTab }) {
                       onClick={() => handleOpenCreateOperator(String(currentWs.id))}
                       className="text-xs"
                     >
-                      + Thêm Thợ
+                      Thêm Thợ
                     </Button>
                   )}
                 </div>
@@ -2214,7 +2235,7 @@ export default function ProductionModule({ initialSubTab }) {
                       onClick={() => handleOpenAddStep(String(currentWs.id))}
                       className="text-xs bg-emerald-600 hover:bg-emerald-700 border-none text-white shadow-xs"
                     >
-                      + Thêm Công Đoạn
+                      Thêm Công Đoạn
                     </Button>
                   )}
                 </div>
@@ -2335,21 +2356,20 @@ export default function ProductionModule({ initialSubTab }) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Phân Xưởng CNC Phụ Trách
-              </label>
-              <select
+              <Dropdown
+                label="Phân Xưởng CNC Phụ Trách"
+                placeholder="-- Dùng chung / Không cố định xưởng --"
                 value={stepForm.workshop_id}
                 onChange={(e) => setStepForm({ ...stepForm, workshop_id: e.target.value })}
-                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
-              >
-                <option value="">-- Dùng chung / Không cố định xưởng --</option>
-                {workshops.map((w) => (
-                  <option key={w.id} value={String(w.id)}>
-                    {w.code} - {w.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: '-- Dùng chung / Không cố định xưởng --' },
+                  ...workshops.map((w) => ({
+                    value: String(w.id),
+                    label: `${w.code} - ${w.name}`,
+                    badge: `${w.machine_count || 0} máy`,
+                  })),
+                ]}
+              />
             </div>
             <Input
               label="Tổ Máy / Thợ Phụ Trách Đảm Nhiệm"
@@ -2410,21 +2430,20 @@ export default function ProductionModule({ initialSubTab }) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Phân Xưởng CNC Phụ Trách
-              </label>
-              <select
+              <Dropdown
+                label="Phân Xưởng CNC Phụ Trách"
+                placeholder="-- Dùng chung / Không cố định xưởng --"
                 value={stepForm.workshop_id}
                 onChange={(e) => setStepForm({ ...stepForm, workshop_id: e.target.value })}
-                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
-              >
-                <option value="">-- Dùng chung / Không cố định xưởng --</option>
-                {workshops.map((w) => (
-                  <option key={w.id} value={String(w.id)}>
-                    {w.code} - {w.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: '-- Dùng chung / Không cố định xưởng --' },
+                  ...workshops.map((w) => ({
+                    value: String(w.id),
+                    label: `${w.code} - ${w.name}`,
+                    badge: `${w.machine_count || 0} máy`,
+                  })),
+                ]}
+              />
             </div>
             <Input
               label="Tổ Máy / Thợ Phụ Trách Đảm Nhiệm"
@@ -2484,21 +2503,20 @@ export default function ProductionModule({ initialSubTab }) {
               onChange={(e) => setOperatorForm({ ...operatorForm, phone: e.target.value })}
             />
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Phân Xưởng Trực Thuộc
-              </label>
-              <select
+              <Dropdown
+                label="Phân Xưởng Trực Thuộc"
+                placeholder="-- Chưa gán phân xưởng --"
                 value={operatorForm.workshop_id}
                 onChange={(e) => setOperatorForm({ ...operatorForm, workshop_id: e.target.value })}
-                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
-              >
-                <option value="">-- Chưa gán phân xưởng --</option>
-                {workshops.map((w) => (
-                  <option key={w.id} value={String(w.id)}>
-                    {w.code} - {w.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: '-- Chưa gán phân xưởng --' },
+                  ...workshops.map((w) => ({
+                    value: String(w.id),
+                    label: `${w.code} - ${w.name}`,
+                    badge: `${w.machine_count || 0} máy`,
+                  })),
+                ]}
+              />
             </div>
           </div>
           <Input
@@ -2580,21 +2598,20 @@ export default function ProductionModule({ initialSubTab }) {
               onChange={(e) => setEditOperatorForm({ ...editOperatorForm, phone: e.target.value })}
             />
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Phân Xưởng Trực Thuộc
-              </label>
-              <select
+              <Dropdown
+                label="Phân Xưởng Trực Thuộc"
+                placeholder="-- Chưa gán phân xưởng --"
                 value={editOperatorForm.workshop_id}
                 onChange={(e) => setEditOperatorForm({ ...editOperatorForm, workshop_id: e.target.value })}
-                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
-              >
-                <option value="">-- Chưa gán phân xưởng --</option>
-                {workshops.map((w) => (
-                  <option key={w.id} value={String(w.id)}>
-                    {w.code} - {w.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: '-- Chưa gán phân xưởng --' },
+                  ...workshops.map((w) => ({
+                    value: String(w.id),
+                    label: `${w.code} - ${w.name}`,
+                    badge: `${w.machine_count || 0} máy`,
+                  })),
+                ]}
+              />
             </div>
           </div>
           <Input
