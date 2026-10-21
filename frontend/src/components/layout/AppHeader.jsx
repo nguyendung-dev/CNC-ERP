@@ -214,7 +214,7 @@ export default function AppHeader({
         if (onSelectModule) onSelectModule('finance');
       } else if (q.startsWith('USER-') || q.includes('ADMIN') || q.includes('ROLE')) {
         setIsSearchOpen(false);
-        if (onSelectModule) onSelectModule('settings');
+        if (onSelectModule && user?.role === 'admin') onSelectModule('settings');
       }
     }
   };

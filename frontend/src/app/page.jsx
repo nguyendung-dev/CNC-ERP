@@ -74,6 +74,9 @@ export default function DashboardPage() {
   const [activeSubNav, setActiveSubNav] = useState(null);
 
   const handleNavChange = (id, subId) => {
+    if (id === 'settings' && user?.role !== 'admin') {
+      return;
+    }
     setActiveNav(id);
     if (subId) {
       setActiveSubNav(subId);
@@ -326,10 +329,10 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    if (activeNav === 'settings') {
+    if (activeNav === 'settings' && user?.role === 'admin') {
       fetchUsers();
     }
-  }, [activeNav]);
+  }, [activeNav, user?.role]);
 
   const handleRegisterUser = async (e) => {
     e.preventDefault();
@@ -442,16 +445,23 @@ export default function DashboardPage() {
     });
   };
 
-  // Role-based Nav Permissions Map: All roles can view Matrix & Workflow!
+  // Role-based Nav Permissions Map: Phân quyền (settings) chỉ Admin mới được thấy và truy cập!
   const ROLE_NAV_PERMISSIONS = {
     admin: ['home', 'sales', 'customers', 'inventory', 'production', 'finance', 'reports', 'settings'],
-    sales: ['home', 'sales', 'customers', 'inventory', 'settings'],
-    production: ['home', 'production', 'inventory', 'settings'],
-    warehouse: ['home', 'inventory', 'production', 'settings'],
-    accountant: ['home', 'finance', 'sales', 'customers', 'reports', 'settings'],
+    sales: ['home', 'sales', 'customers', 'inventory'],
+    production: ['home', 'production', 'inventory'],
+    warehouse: ['home', 'inventory', 'production'],
+    accountant: ['home', 'finance', 'sales', 'customers', 'reports'],
   };
 
   const allowedNavIds = (user && ROLE_NAV_PERMISSIONS[user.role]) || ['home'];
+
+  // Automatically reset to 'home' if current activeNav is forbidden for current role
+  useEffect(() => {
+    if (user && !allowedNavIds.includes(activeNav)) {
+      setActiveNav('home');
+    }
+  }, [user?.role]);
 
   const allNavItems = [
     { id: 'home', label: t('nav.home', 'Trang chủ'), icon: Home },
@@ -662,8 +672,8 @@ export default function DashboardPage() {
           {activeNav === 'finance' && <FinanceModule initialSubTab={activeSubNav} />}
           {activeNav === 'reports' && <ReportsModule />}
 
-          {/* Settings / RBAC View with Integrated Permission Matrix, 8-Step Workflow & User Accounts */}
-          {activeNav === 'settings' && (
+          {/* Settings / RBAC View with Integrated Permission Matrix, 8-Step Workflow & User Accounts (Only Admin) */}
+          {activeNav === 'settings' && user?.role === 'admin' && (
             <PermissionMatrixModule
               initialSubTab={activeSubNav}
               user={user}
