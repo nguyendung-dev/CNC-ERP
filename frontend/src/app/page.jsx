@@ -24,6 +24,7 @@ import {
   LogOut, 
   User, 
   UserPlus,
+  Users,
   ShieldCheck,
   RefreshCw,
   ArrowRight,
@@ -53,6 +54,7 @@ import InventoryModule from '../components/modules/InventoryModule';
 import ProductionModule from '../components/modules/ProductionModule';
 import FinanceModule from '../components/modules/FinanceModule';
 import ReportsModule from '../components/modules/ReportsModule';
+import CustomersModule from '../components/modules/CustomersModule';
 
 export default function DashboardPage() {
   const { user, token, isLoading, logout, ROLE_LABELS } = useAuth();
@@ -354,11 +356,11 @@ export default function DashboardPage() {
 
   // Role-based Nav Permissions Map: Only Admin sees all 7 modules!
   const ROLE_NAV_PERMISSIONS = {
-    admin: ['home', 'sales', 'inventory', 'production', 'finance', 'reports', 'settings'],
-    sales: ['home', 'sales', 'inventory'],
+    admin: ['home', 'sales', 'customers', 'inventory', 'production', 'finance', 'reports', 'settings'],
+    sales: ['home', 'sales', 'customers', 'inventory'],
     production: ['home', 'production', 'inventory'],
     warehouse: ['home', 'inventory', 'production'],
-    accountant: ['home', 'finance', 'sales', 'reports'],
+    accountant: ['home', 'finance', 'sales', 'customers', 'reports'],
   };
 
   const allowedNavIds = (user && ROLE_NAV_PERMISSIONS[user.role]) || ['home'];
@@ -366,6 +368,7 @@ export default function DashboardPage() {
   const allNavItems = [
     { id: 'home', label: 'Trang chủ', icon: Home },
     { id: 'sales', label: 'Bán hàng', icon: ShoppingCart },
+    { id: 'customers', label: 'Khách hàng', icon: Users },
     { id: 'inventory', label: 'Kho vật tư', icon: Package },
     { id: 'production', label: 'Sản xuất', icon: Factory },
     { id: 'finance', label: 'Tài chính', icon: CreditCard },
@@ -379,6 +382,7 @@ export default function DashboardPage() {
   const pageTitles = {
     home: 'Trang chủ',
     sales: 'Quản lý Bán Hàng & Báo Giá',
+    customers: 'Quản Lý Danh Mục Khách Hàng & Đối Tác',
     inventory: 'Quản lý Kho Phôi & Dao Cụ',
     production: 'Quản lý Sản Xuất & Điều Độ Máy',
     finance: 'Quản lý Tài Chính & Dòng Tiền',
@@ -452,6 +456,7 @@ export default function DashboardPage() {
 
           {/* Module Views (Guarded by permission) */}
           {activeNav === 'sales' && <SalesModule />}
+          {activeNav === 'customers' && <CustomersModule />}
           {activeNav === 'inventory' && <InventoryModule />}
           {activeNav === 'production' && <ProductionModule />}
           {activeNav === 'finance' && <FinanceModule />}

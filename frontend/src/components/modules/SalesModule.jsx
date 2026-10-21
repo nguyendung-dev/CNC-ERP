@@ -46,6 +46,7 @@ export default function SalesModule() {
   const [quotations, setQuotations] = useState([]);
   const [orders, setOrders] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
+  const [customerList, setCustomerList] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Modal states
@@ -79,14 +80,16 @@ export default function SalesModule() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [resQuotes, resOrders, resDeliveries] = await Promise.all([
+      const [resQuotes, resOrders, resDeliveries, resCustomers] = await Promise.allSettled([
         api.get('/sales/quotations'),
         api.get('/sales/orders'),
         api.get('/sales/delivery-notes'),
+        api.get('/customers'),
       ]);
-      setQuotations(resQuotes.data || []);
-      setOrders(resOrders.data || []);
-      setDeliveries(resDeliveries.data || []);
+      setQuotations(resQuotes.status === 'fulfilled' ? (resQuotes.value.data || []) : []);
+      setOrders(resOrders.status === 'fulfilled' ? (resOrders.value.data || []) : []);
+      setDeliveries(resDeliveries.status === 'fulfilled' ? (resDeliveries.value.data || []) : []);
+      setCustomerList(resCustomers.status === 'fulfilled' ? (resCustomers.value.data || []) : []);
     } catch (err) {
       console.error('Failed to load sales data:', err);
     } finally {
@@ -576,17 +579,59 @@ export default function SalesModule() {
         }
       >
         <form className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Khách hàng / Doanh nghiệp"
-              placeholder="VD: Cty Sakura"
-              value={quotationForm.customer_name}
-              onChange={(e) => setQuotationForm({ ...quotationForm, customer_name: e.target.value })}
-              required
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Khách hàng / Doanh nghiệp <span className="text-rose-500">*</span>
+                </label>
+                {customerList.length > 0 && (
+                  <span className="text-[10px] text-blue-600 font-semibold">
+                    ({customerList.length} khách hàng đã tạo)
+                  </span>
+                )}
+              </div>
+              <select
+                value={customerList.some((c) => c.name === quotationForm.customer_name) ? quotationForm.customer_name : (quotationForm.customer_name ? '__custom__' : '')}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '__custom__') {
+                    setQuotationForm(prev => ({ ...prev, customer_name: '' }));
+                  } else {
+                    const found = customerList.find((c) => c.name === val);
+                    setQuotationForm((prev) => ({
+                      ...prev,
+                      customer_name: val,
+                      customer_phone: found?.phone || prev.customer_phone,
+                    }));
+                  }
+                }}
+                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+                required
+              >
+                <option value="">-- Chọn khách hàng đã tạo --</option>
+                {customerList.map((c) => (
+                  <option key={c.id} value={c.name}>
+                    {c.code} - {c.name} {c.phone ? `(${c.phone})` : ''}
+                  </option>
+                ))}
+                <option value="__custom__">✏️ Hoặc nhập khách hàng mới khác...</option>
+              </select>
+
+              {(!customerList.some((c) => c.name === quotationForm.customer_name) || quotationForm.customer_name === '') && (
+                <input
+                  type="text"
+                  placeholder="Gõ tên khách hàng mới tại đây..."
+                  value={quotationForm.customer_name}
+                  onChange={(e) => setQuotationForm({ ...quotationForm, customer_name: e.target.value })}
+                  className="w-full mt-1.5 px-3 py-1.5 text-xs rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-blue-50/20"
+                />
+              )}
+            </div>
+
             <Input
               label="Số điện thoại / Liên hệ"
-              placeholder="0912..."
+              placeholder="VD: 0912..."
               value={quotationForm.customer_phone}
               onChange={(e) => setQuotationForm({ ...quotationForm, customer_phone: e.target.value })}
             />
@@ -741,7 +786,7 @@ export default function SalesModule() {
             />
             {deliveryForm.so_id && (
               <p className="text-xs text-blue-600 font-medium mt-1">
-                ✨ Đã tự động điền Tên khách hàng, Mã bản vẽ và Số lượng còn lại từ Đơn hàng SO.
+                Đã tự động điền Tên khách hàng, Mã bản vẽ và Số lượng còn lại từ Đơn hàng SO.
               </p>
             )}
           </div>

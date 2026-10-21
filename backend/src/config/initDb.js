@@ -31,6 +31,38 @@ async function initializeDatabase() {
     try {
       await pool.query("ALTER TABLE users ADD COLUMN status VARCHAR(50) DEFAULT 'active' AFTER role;");
     } catch (e) {}
+    // Customers Table (Khách hàng & Đối tác doanh nghiệp)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS customers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        code VARCHAR(50) UNIQUE NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        phone VARCHAR(50) DEFAULT '',
+        email VARCHAR(150) DEFAULT '',
+        address VARCHAR(255) DEFAULT '',
+        tax_code VARCHAR(50) DEFAULT '',
+        contact_person VARCHAR(150) DEFAULT '',
+        note TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    try {
+      const [existingCust] = await pool.query('SELECT COUNT(*) as count FROM customers');
+      if (existingCust[0].count === 0) {
+        await pool.query(`
+          INSERT INTO customers (code, name, phone, email, address, tax_code, contact_person, note) VALUES
+          ('KH-001', 'Công ty Cơ khí Chính xác Sakura', '0912345678', 'sakura.cnc@gmail.com', 'KCN Nội Bài, Sóc Sơn, Hà Nội', '0108899123', 'Mr. Kenji Tanaka', 'Khách hàng FDI Nhật Bản, gia công trục truyền động chính xác'),
+          ('KH-002', 'Tập đoàn Chế tạo Máy Alpha Tech', '0988776655', 'alphatech.vn@gmail.com', 'KCN VSIP, Bắc Ninh', '0109988456', 'Nguyễn Văn Tuấn', 'Đơn hàng định kỳ đồ gá Jig nhôm & gối đỡ vòng bi'),
+          ('KH-003', 'Công ty TNHH Khuôn mẫu Tân Phát', '0903112233', 'tanphat.mold@gmail.com', 'KCN Biên Hòa 2, Đồng Nai', '3601239871', 'Phạm Quốc Tân', 'Chuyên khuôn ép nhựa và lòng khuôn S50C'),
+          ('KH-004', 'Xưởng Robot & Tự Động Hóa Delta', '0905123456', 'delta.robotics@gmail.com', 'Khu CNC Hòa Lạc, Hà Nội', '0107766221', 'Trần Đức Nam', 'Gia công chi tiết robot công nghiệp, cánh tay máy'),
+          ('KH-005', 'Công ty Thiết Bị Cơ Khí Tân Bình', '0938112233', 'tanbinh.mech@gmail.com', 'KCN Tân Bình, TP.HCM', '0304455667', 'Lê Thu Hằng', 'Phụ tùng máy đóng gói bao bì, bánh răng');
+        `);
+      }
+    } catch (e) {
+      console.warn('[Database] Seed customers error:', e.message);
+    }
+
     // 1. Materials Table (Kho vật tư, phôi, dao cụ cơ khí)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS materials (
