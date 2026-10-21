@@ -237,6 +237,10 @@ export default function DashboardPage() {
 
   const handleRegisterUser = async (e) => {
     e.preventDefault();
+    if (user?.role !== 'admin') {
+      alert('Chỉ tài khoản Quản trị viên (Admin) mới có quyền tạo tài khoản nhân viên mới!');
+      return;
+    }
     setRegSubmitting(true);
     setRegMessage({ type: '', text: '' });
     try {
