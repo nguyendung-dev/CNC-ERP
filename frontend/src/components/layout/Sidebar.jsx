@@ -19,7 +19,7 @@ export default function Sidebar({
 }) {
   return (
     <aside
-      className={`${widthClass} bg-white border-r border-slate-200 flex flex-col items-center py-4 shrink-0 z-20 select-none`}
+      className={`hidden md:flex ${widthClass} bg-white border-r border-slate-200 flex-col items-center py-4 shrink-0 z-20 select-none`}
     >
       {/* Navigation Items List */}
       <div className="flex flex-col items-center gap-2 w-full px-2.5">

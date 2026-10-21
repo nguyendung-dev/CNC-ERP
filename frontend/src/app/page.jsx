@@ -398,6 +398,9 @@ export default function DashboardPage() {
         user={user}
         logout={logout}
         roleLabels={ROLE_LABELS}
+        navItems={navItems}
+        activeNav={activeNav}
+        onNavChange={(id) => setActiveNav(id)}
       />
 
       {/* 2. Main Body with Sidebar + Content */}
@@ -1183,6 +1186,26 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+      {/* Mobile Bottom Navigation Bar (md:hidden) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 flex items-center justify-around py-1 px-1 shadow-lg">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeNav === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveNav(item.id)}
+              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition cursor-pointer flex-1 max-w-[60px] ${
+                isActive ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-800'
+              }`}
+              title={item.label}
+            >
+              <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isActive ? 'stroke-[2.2]' : 'stroke-[1.8]'}`} />
+              <span className="text-[9px] sm:text-[10px] mt-0.5 leading-tight truncate w-full text-center">{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }

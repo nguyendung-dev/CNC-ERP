@@ -3,6 +3,7 @@
 import { t } from '../../i18n';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
@@ -51,10 +52,14 @@ export default function AppHeader({
   user,
   logout,
   roleLabels = {},
+  navItems = [],
+  activeNav = 'home',
+  onNavChange,
 }) {
   const router = useRouter();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const userMenuRef = useRef(null);
   const { updateCurrentUser } = useAuth();
   const { showSuccess, showError } = useToast();
@@ -246,22 +251,38 @@ export default function AppHeader({
   return (
     <header className="bg-white border-b border-slate-200 h-16 flex items-stretch justify-between z-40 sticky top-0 shadow-xs">
       {/* Left: Aligned exactly with Sidebar width - Full-cell hoverable & clickable */}
+            {/* Left: Hamburger on Mobile (< md), Logo on Desktop (>= md) */}
       <button
-        onClick={onLogoClick}
-        className={`${sidebarWidthClass} h-full flex items-center justify-center border-r border-slate-200 shrink-0 text-slate-500 hover:bg-blue-50/80 hover:text-blue-600 transition-colors duration-200 cursor-pointer group focus:outline-none`}
-        title={`${workspaceName} - Về Trang chủ`}
+        onClick={() => {
+          if (typeof window !== 'undefined' && window.innerWidth < 768) {
+            setIsMobileDrawerOpen(!isMobileDrawerOpen);
+          } else if (onLogoClick) {
+            onLogoClick();
+          }
+        }}
+        className="w-14 sm:w-16 md:w-28 h-full flex items-center justify-center border-r border-slate-200 shrink-0 text-slate-500 hover:bg-blue-50/80 hover:text-blue-600 transition-colors duration-200 cursor-pointer group focus:outline-none"
+        title="Menu điều hướng"
       >
-        <LayoutGrid
-          className="w-7 h-7 text-slate-600 group-hover:text-blue-600 transition-colors duration-200"
-          strokeWidth={2}
-        />
+        <span className="md:hidden">
+          {isMobileDrawerOpen ? (
+            <X className="w-5 h-5 text-slate-700" />
+          ) : (
+            <Menu className="w-5 h-5 text-slate-700" />
+          )}
+        </span>
+        <span className="hidden md:inline-block">
+          <LayoutGrid
+            className="w-7 h-7 text-slate-600 group-hover:text-blue-600 transition-colors duration-200"
+            strokeWidth={2}
+          />
+        </span>
       </button>
 
       {/* Center: Page Title (Prominent & Bolder) + Workspace Name */}
       <div className="flex-1 flex items-center justify-between px-4 md:px-6 gap-3">
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           {/* Current Page Title: Bolder & Larger as specified */}
-          <h1 className="text-sm sm:text-base md:text-lg font-extrabold text-slate-900 tracking-tight whitespace-nowrap">
+          <h1 className="text-xs sm:text-base md:text-lg font-extrabold text-slate-900 tracking-tight truncate max-w-[120px] sm:max-w-xs md:max-w-none">
             {pageTitle}
           </h1>
 
@@ -290,7 +311,7 @@ export default function AppHeader({
                 }}
                 onKeyDown={handleKeyDownInput}
                 placeholder="Tìm mã: SO-, LSX-, PHOI-, BG-..."
-                className="w-44 sm:w-60 md:w-72 pl-9 pr-8 py-1.5 text-xs rounded-xl bg-slate-50/80 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none transition-all placeholder:text-slate-400 font-medium"
+                className="w-28 sm:w-52 md:w-72 pl-8 sm:pl-9 pr-6 sm:pr-8 py-1.5 text-xs rounded-xl bg-slate-50/80 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none transition-all placeholder:text-slate-400 font-medium"
               />
 
               {/* Clear button or Spinner */}
@@ -630,6 +651,104 @@ export default function AppHeader({
           </div>
         )}
       </Modal>
+      {/* Mobile Navigation Drawer */}
+      {isMobileDrawerOpen && typeof document !== 'undefined' &&
+        createPortal(
+          <div className="fixed inset-0 z-[999998] md:hidden flex">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
+              onClick={() => setIsMobileDrawerOpen(false)}
+            />
+
+            {/* Slide-out Panel */}
+            <div className="relative z-10 w-72 max-w-[85vw] bg-white h-full shadow-2xl flex flex-col justify-between animate-in slide-in-from-left duration-200">
+              {/* Header */}
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-center shadow-xs">
+                    CNC
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm leading-tight">CNC-ERP</h3>
+                    <p className="text-[11px] text-slate-400">Workspace xưởng cơ khí</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Navigation Items */}
+              <div className="p-3 space-y-1.5 overflow-y-auto flex-1">
+                {(navItems || []).map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeNav === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        if (onNavChange) onNavChange(item.id);
+                        if (onSelectModule) onSelectModule(item.id);
+                        setIsMobileDrawerOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                        isActive
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-xs'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      }`}
+                    >
+                      {Icon && <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />}
+                      <span className="flex-1 text-left">{item.label}</span>
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white">
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* User profile & Logout footer */}
+              <div className="p-3.5 border-t border-slate-100 bg-slate-50/80 space-y-2.5">
+                <div
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
+                    handleOpenProfileModal();
+                  }}
+                  className="flex items-center gap-2.5 p-2 rounded-xl bg-white border border-slate-200/80 shadow-xs cursor-pointer hover:border-blue-300 transition"
+                >
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs shrink-0">
+                    {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-slate-800 text-xs truncate">{user?.full_name || 'Người Dùng'}</p>
+                    <p className="text-[10px] text-slate-400 font-mono truncate">@{user?.username || 'user'}</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
+                    if (logout) logout();
+                    router.push('/login');
+                  }}
+                  className="w-full py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer border border-rose-200/60"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  {t('auth.logout', 'Đăng xuất')}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </header>
   );
 }

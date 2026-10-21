@@ -65,9 +65,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="h-screen max-h-screen w-full flex flex-col lg:flex-row bg-slate-900 text-slate-100 font-sans overflow-hidden">
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-slate-900 text-slate-100 font-sans overflow-y-auto lg:overflow-hidden">
       {/* LEFT PANEL - CNC INDUSTRIAL HERO */}
-      <div className="w-full lg:w-[55%] h-full bg-gradient-to-br from-slate-950 via-[#0d1527] to-[#0f1d38] p-8 lg:p-14 flex flex-col justify-center relative overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800/80">
+      <div className="w-full lg:w-[50%] shrink-0 lg:h-full bg-gradient-to-br from-slate-950 via-[#0d1527] to-[#0f1d38] p-6 sm:p-10 lg:p-14 flex flex-col justify-center relative overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800/80">
         <div 
           className="absolute inset-0 opacity-[0.03] pointer-events-none"
           style={{
@@ -114,7 +114,7 @@ export default function LoginPage() {
       </div>
 
       {/* RIGHT PANEL - SECURE LOGIN FORM & QUICK TEST ACCOUNTS */}
-      <div className="w-full lg:w-[45%] h-full bg-[#fafbfc] text-slate-800 px-6 sm:px-10 lg:px-12 py-6 flex flex-col justify-center items-center overflow-y-auto">
+      <div className="w-full lg:w-[50%] flex-1 lg:h-full bg-[#fafbfc] text-slate-800 px-4 sm:px-8 lg:px-12 py-6 sm:py-8 flex flex-col justify-center items-center overflow-y-auto">
         <div className="w-full max-w-md my-auto py-2">
           {/* Header */}
           <div className="mb-5">

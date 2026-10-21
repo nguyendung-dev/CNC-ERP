@@ -28,7 +28,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, maxWid
   if (!isOpen || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4">
       {/* Backdrop overlay covering 100% of viewport */}
       <div 
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200" 
@@ -36,11 +36,11 @@ export default function Modal({ isOpen, onClose, title, children, footer, maxWid
       />
       {/* Modal Dialog */}
       <div
-        className={`relative z-10 bg-white rounded-2xl shadow-2xl border border-slate-200 w-full ${maxWidth} max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200`}
+        className={`relative z-10 bg-white rounded-2xl shadow-2xl border border-slate-200 w-full ${maxWidth} max-h-[94vh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200`}
         role="dialog"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100">
           <h3 className="text-base font-bold text-slate-900">{title}</h3>
           <button
             onClick={onClose}
@@ -51,11 +51,11 @@ export default function Modal({ isOpen, onClose, title, children, footer, maxWid
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto space-y-4">{children}</div>
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4">{children}</div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2 sm:gap-3">
             {footer}
           </div>
         )}
