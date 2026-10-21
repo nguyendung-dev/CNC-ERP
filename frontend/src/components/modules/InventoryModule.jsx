@@ -219,7 +219,7 @@ export default function InventoryModule() {
     <div className="space-y-6">
       {/* Top Banner Alert for Low Stock */}
       {lowStockList.length > 0 && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between">
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-amber-100 rounded-xl text-amber-700">
               <AlertTriangle className="w-5 h-5" />
@@ -271,7 +271,7 @@ export default function InventoryModule() {
           </select>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             onClick={() => setIsAddModalOpen(true)}
             icon={Plus}

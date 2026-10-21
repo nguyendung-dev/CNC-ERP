@@ -416,7 +416,7 @@ export default function DashboardPage() {
         />
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 pb-24 md:pb-6">
           {/* Module Views */}
           {activeNav === 'sales' && <SalesModule />}
           {activeNav === 'inventory' && <InventoryModule />}
@@ -439,7 +439,7 @@ export default function DashboardPage() {
                       Phân quyền truy cập các module gia công cơ khí chính xác theo đúng chức danh & nhiệm vụ.
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <button
                       onClick={fetchUsers}
                       disabled={usersLoading}
@@ -452,7 +452,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* 5 Standard CNC Roles Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                   <div className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/70 hover:border-blue-200 transition">
                     <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded bg-rose-50 text-rose-700 border border-rose-200 mb-1.5">
                       Admin
@@ -877,8 +877,8 @@ export default function DashboardPage() {
               <div className="lg:col-span-8 space-y-6">
                 {/* Card 1: Việc cần xử lý & phê duyệt trong xưởng */}
                 <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-                    <h2 className="text-sm font-bold text-slate-900">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 mb-4">
+                    <h2 className="text-sm sm:text-base font-bold text-slate-900 shrink-0">
                       Việc cần xử lý & phê duyệt ({
                         pendingTasks.filter((task) => {
                           if (taskCategoryFilter !== 'all' && task.actionType !== taskCategoryFilter) return false;
@@ -890,7 +890,7 @@ export default function DashboardPage() {
                         }).length
                       })
                     </h2>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                       <select
                         value={taskCategoryFilter}
                         onChange={(e) => setTaskCategoryFilter(e.target.value)}
@@ -964,7 +964,7 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Category Tag & Action Buttons */}
-                        <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t border-slate-50 sm:border-0">
                           <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border ${task.tagColor}`}>
                             {task.category}
                           </span>
@@ -993,13 +993,13 @@ export default function DashboardPage() {
 
                 {/* Card 2: Tiến độ Đơn hàng (SO) & Lệnh sản xuất (LSX) */}
                 <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-                    <h2 className="text-sm font-bold text-slate-900">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 mb-4">
+                    <h2 className="text-sm sm:text-base font-bold text-slate-900">
                       Đơn hàng (SO) & Tiến độ gia công xưởng ({activeOrders.length})
                     </h2>
                     <button
                       onClick={() => setActiveNav('sales')}
-                      className="text-xs text-blue-600 hover:underline font-medium flex items-center gap-1"
+                      className="text-xs text-blue-600 hover:underline font-medium flex items-center gap-1 self-start sm:self-auto"
                     >
                       Xem tất cả đơn hàng <ArrowRight className="w-3.5 h-3.5" />
                     </button>
@@ -1026,7 +1026,7 @@ export default function DashboardPage() {
                             </p>
                           </div>
 
-                          <div className="w-48 self-end sm:self-center">
+                          <div className="w-full sm:w-48 self-start sm:self-center mt-2 sm:mt-0">
                             <div className="flex justify-between text-xs mb-1">
                               <span className="text-slate-600">Đã giao: {order.delivered_qty}/{order.order_qty}</span>
                               <span className="font-bold text-blue-600">{percent}%</span>

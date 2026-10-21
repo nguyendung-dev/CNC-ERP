@@ -311,7 +311,7 @@ export default function AppHeader({
                   if (searchResults.length > 0) setIsSearchOpen(true);
                 }}
                 onKeyDown={handleKeyDownInput}
-                placeholder="Tìm mã: SO-, LSX-, PHOI-, BG-..."
+                placeholder="Tìm mã: SO, LSX, BG..."
                 className="w-28 sm:w-52 md:w-72 pl-8 sm:pl-9 pr-6 sm:pr-8 py-1.5 text-xs rounded-xl bg-slate-50/80 hover:bg-slate-100 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none transition-all placeholder:text-slate-400 font-medium"
               />
 

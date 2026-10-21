@@ -234,7 +234,7 @@ export default function FinanceModule() {
     <div className="space-y-6">
       {/* Sub Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
-        <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60">
+        <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60 overflow-x-auto max-w-full no-scrollbar">
           <button
             onClick={() => setSubTab('advances')}
             className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
@@ -276,7 +276,7 @@ export default function FinanceModule() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {subTab === 'advances' && (
             <Button size="md" icon={Plus} onClick={() => setIsAdvanceModalOpen(true)}>
               Tạo phiếu tạm ứng
