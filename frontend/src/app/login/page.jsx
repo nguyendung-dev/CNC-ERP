@@ -67,9 +67,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-slate-900 text-slate-100 font-sans overflow-y-auto lg:overflow-hidden">
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#fafbfc] text-slate-800 font-sans">
       {/* LEFT PANEL - CNC INDUSTRIAL HERO */}
-      <div className="w-full lg:w-[50%] shrink-0 lg:h-full bg-gradient-to-br from-slate-950 via-[#0d1527] to-[#0f1d38] p-6 sm:p-10 lg:p-14 flex flex-col justify-center relative overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800/80">
+      <div className="w-full lg:w-1/2 min-h-screen bg-gradient-to-br from-slate-950 via-[#0d1527] to-[#0f1d38] text-slate-100 p-6 sm:p-10 lg:p-14 flex flex-col justify-center relative overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800/80 shrink-0">
         <div 
           className="absolute inset-0 opacity-[0.03] pointer-events-none"
           style={{
@@ -116,7 +116,7 @@ export default function LoginPage() {
       </div>
 
       {/* RIGHT PANEL - SECURE LOGIN FORM & QUICK TEST ACCOUNTS */}
-      <div className="w-full lg:w-[50%] flex-1 lg:h-full bg-[#fafbfc] text-slate-800 px-4 sm:px-8 lg:px-12 py-6 sm:py-8 flex flex-col justify-center items-center overflow-y-auto">
+      <div className="w-full lg:w-1/2 min-h-screen flex-1 bg-[#fafbfc] text-slate-800 px-4 sm:px-8 lg:px-12 py-8 flex flex-col justify-center items-center">
         <div className="w-full max-w-md my-auto py-2">
           {/* Header */}
           <div className="mb-5">
@@ -193,67 +193,40 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* Quick Login Collapsible Dropdown for Testing & Role Verification */}
-            <div className="pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setIsQuickOpen(!isQuickOpen)}
-                className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition cursor-pointer text-left group"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-200">
-                    <Zap className="w-3.5 h-3.5 fill-amber-400" />
-                  </span>
-                  <div>
-                    <span className="text-xs font-bold text-slate-700 group-hover:text-blue-600 transition block leading-tight">
-                      Đăng nhập nhanh để test
-                    </span>
-                    <span className="text-[10px] text-slate-400">
-                      5 vai trò mẫu • Mật khẩu: 123456
-                    </span>
-                  </div>
-                </div>
+            {/* Quick Login Dropdown Select (Hộp chọn sổ ra) for Testing */}
+            <div className="pt-3.5 border-t border-slate-100 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wide">
+                  <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                  Đăng nhập nhanh để test
+                </label>
+                <span className="text-[10px] text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                  Pass: 123456
+                </span>
+              </div>
 
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-blue-600 font-semibold hidden sm:inline">
-                    {isQuickOpen ? 'Thu gọn' : 'Sổ ra'}
-                  </span>
-                  <ChevronDown
-                    className={`w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-transform duration-200 ${
-                      isQuickOpen ? 'rotate-180 text-blue-600' : ''
-                    }`}
-                  />
-                </div>
-              </button>
-
-              {/* Collapsible Content (Sổ ra) */}
-              {isQuickOpen && (
-                <div className="mt-2.5 pt-2 border-t border-slate-100/80 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                    {(QUICK_ACCOUNTS || []).map((acc) => (
-                      <button
-                        key={acc.email}
-                        type="button"
-                        disabled={loading}
-                        onClick={() => handleQuickLoginClick(acc.email)}
-                        className={`text-left p-2.5 rounded-xl border transition group cursor-pointer ${
-                          acc.role === 'admin'
-                            ? 'sm:col-span-2 bg-gradient-to-r from-blue-50 to-indigo-50/70 border-blue-200 hover:border-blue-400 shadow-xs'
-                            : 'bg-slate-50/70 hover:bg-white border-slate-200 hover:border-blue-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-bold text-slate-800 group-hover:text-blue-600 truncate">
-                            {acc.label}
-                          </p>
-                          <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition shrink-0 ml-1" />
-                        </div>
-                        <p className="text-[10px] text-slate-400 font-mono truncate mt-0.5">{acc.email}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div className="relative">
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleQuickLoginClick(e.target.value);
+                    }
+                  }}
+                  disabled={loading}
+                  className="w-full py-2.5 px-3.5 pr-9 bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl text-xs font-semibold text-slate-700 cursor-pointer transition appearance-none shadow-xs"
+                >
+                  <option value="" disabled>
+                    ⚡ Bấm vào đây để sổ ra danh sách tài khoản test (5 vai trò)...
+                  </option>
+                  <option value="admin@cnc.com">👑 Quản trị viên (Toàn quyền) — admin@cnc.com</option>
+                  <option value="sales@cnc.com">💼 Kinh doanh (Bán hàng & Báo giá) — sales@cnc.com</option>
+                  <option value="prod@cnc.com">⚙️ Sản xuất CNC (Lệnh SX & WIP) — prod@cnc.com</option>
+                  <option value="kho@cnc.com">📦 Thủ kho (Phôi kim loại & Dao cụ) — kho@cnc.com</option>
+                  <option value="ketoan@cnc.com">💰 Kế toán (Tài chính & Công nợ) — ketoan@cnc.com</option>
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             </div>
 
             {/* Admin Policy Notice */}
