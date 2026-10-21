@@ -18,7 +18,7 @@ import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import ExportButton from '../ui/ExportButton';
 import Modal from '../ui/Modal';
-import { Input } from '../ui/Input';
+import { Input, Select } from '../ui/Input';
 import * as XLSX from 'xlsx';
 
 export default function SalesModule() {
@@ -120,6 +120,56 @@ export default function SalesModule() {
       setActiveSubTab('orders');
     } catch (err) {
       alert(`Lỗi: ${err.message}`);
+    }
+  };
+
+  const handleOpenNewDelivery = () => {
+    const latestSo = orders.length > 0 ? orders[0] : null;
+    if (latestSo) {
+      setSelectedOrderForDelivery(latestSo);
+      setDeliveryForm({
+        so_id: latestSo.id,
+        customer_name: latestSo.customer_name,
+        drawing_code: latestSo.drawing_code,
+        delivery_qty: Math.max(1, (Number(latestSo.order_qty) || 0) - (Number(latestSo.delivered_qty) || 0)),
+        receiver_name: '',
+        note: 'Giao hàng đợt mới kèm phiếu KCS',
+      });
+    } else {
+      setSelectedOrderForDelivery(null);
+      setDeliveryForm({
+        so_id: '',
+        customer_name: '',
+        drawing_code: '',
+        delivery_qty: 1,
+        receiver_name: '',
+        note: '',
+      });
+    }
+    setIsDeliveryModalOpen(true);
+  };
+
+  const handleSelectSoForDelivery = (soId) => {
+    if (!soId) {
+      setSelectedOrderForDelivery(null);
+      setDeliveryForm((prev) => ({
+        ...prev,
+        so_id: '',
+        customer_name: '',
+        drawing_code: '',
+      }));
+      return;
+    }
+    const found = orders.find((o) => String(o.id) === String(soId));
+    if (found) {
+      setSelectedOrderForDelivery(found);
+      setDeliveryForm((prev) => ({
+        ...prev,
+        so_id: found.id,
+        customer_name: found.customer_name,
+        drawing_code: found.drawing_code,
+        delivery_qty: Math.max(1, (Number(found.order_qty) || 0) - (Number(found.delivered_qty) || 0)),
+      }));
     }
   };
 
@@ -268,6 +318,16 @@ export default function SalesModule() {
               size="md"
             >
               Lập báo giá mới
+            </Button>
+          )}
+          {activeSubTab === 'deliveries' && (
+            <Button
+              onClick={handleOpenNewDelivery}
+              icon={Plus}
+              variant="primary"
+              size="md"
+            >
+              Lập phiếu XK mới
             </Button>
           )}
           <ExportButton onClick={exportSalesExcel}>
@@ -564,6 +624,25 @@ export default function SalesModule() {
         }
       >
         <form className="space-y-4">
+          <div className="space-y-1">
+            <Select
+              label="Chọn Đơn hàng SO cần xuất hàng (Tự động điền thông tin)"
+              value={deliveryForm.so_id || ''}
+              onChange={(e) => handleSelectSoForDelivery(e.target.value)}
+              options={[
+                { value: '', label: '-- Chọn Đơn hàng SO --' },
+                ...orders.map((o) => ({
+                  value: o.id,
+                  label: `${o.code} - ${o.customer_name} (${o.part_name} | Còn lại: ${Math.max(0, (Number(o.order_qty) || 0) - (Number(o.delivered_qty) || 0))})`,
+                })),
+              ]}
+            />
+            {deliveryForm.so_id && (
+              <p className="text-xs text-blue-600 font-medium mt-1">
+                ✨ Đã tự động điền Tên khách hàng, Mã bản vẽ và Số lượng còn lại từ Đơn hàng SO.
+              </p>
+            )}
+          </div>
           <Input
             label="Khách hàng"
             value={deliveryForm.customer_name}

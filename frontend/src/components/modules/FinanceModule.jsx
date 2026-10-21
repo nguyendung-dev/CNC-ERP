@@ -39,6 +39,7 @@ export default function FinanceModule() {
 
   const [paymentForm, setPaymentForm] = useState({
     recipient: '',
+    advance_id: '',
     category: 'Xưởng gia công ngoài',
     gross_amount: 5000000,
     deduct_advance_amount: 0,
@@ -97,6 +98,30 @@ export default function FinanceModule() {
     }
   };
 
+  const handleSelectAdvanceForPayment = (advId) => {
+    if (!advId) {
+      setPaymentForm((prev) => ({
+        ...prev,
+        advance_id: '',
+        deduct_advance_amount: 0,
+      }));
+      return;
+    }
+    const adv = advances.find((a) => String(a.id) === String(advId));
+    if (adv) {
+      setPaymentForm((prev) => {
+        const autoNote = `Cấn trừ tạm ứng: ${adv.code} (${adv.purpose})`;
+        return {
+          ...prev,
+          advance_id: adv.id,
+          deduct_advance_amount: Number(adv.amount) || 0,
+          recipient: prev.recipient || adv.requester || '',
+          note: prev.note ? (prev.note.includes(adv.code) ? prev.note : `${prev.note} | ${autoNote}`) : autoNote,
+        };
+      });
+    }
+  };
+
   const handleCreatePayment = async (e) => {
     e.preventDefault();
     try {
@@ -104,6 +129,7 @@ export default function FinanceModule() {
       setIsPaymentModalOpen(false);
       setPaymentForm({
         recipient: '',
+        advance_id: '',
         category: 'Xưởng gia công ngoài',
         gross_amount: 5000000,
         deduct_advance_amount: 0,
@@ -466,6 +492,27 @@ export default function FinanceModule() {
         }
       >
         <form className="space-y-4">
+          <div className="space-y-1">
+            <Select
+              label="Cấn trừ phiếu tạm ứng đã duyệt (Tự động điền & trừ tiền)"
+              value={paymentForm.advance_id || ''}
+              onChange={(e) => handleSelectAdvanceForPayment(e.target.value)}
+              options={[
+                { value: '', label: '-- Không cấn trừ tạm ứng --' },
+                ...advances
+                  .filter((a) => a.status === 'approved')
+                  .map((a) => ({
+                    value: a.id,
+                    label: `${a.code} - ${a.requester} (${Number(a.amount).toLocaleString()} VNĐ - ${a.purpose})`,
+                  })),
+              ]}
+            />
+            {paymentForm.advance_id && (
+              <p className="text-xs text-blue-600 font-medium mt-1">
+                ✨ Đã tự động cấn trừ số tiền tạm ứng vào phiếu đề nghị thanh toán này.
+              </p>
+            )}
+          </div>
           <Input
             label="Đơn vị thụ hưởng (NCC Phôi / Xưởng ngoài)"
             placeholder="Xưởng Anode Kim Phát / Cty Thép Phương Nam"

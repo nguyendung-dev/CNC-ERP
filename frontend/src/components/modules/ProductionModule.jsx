@@ -24,6 +24,7 @@ export default function ProductionModule() {
   const [orders, setOrders] = useState([]);
   const [movements, setMovements] = useState([]);
   const [subcontracts, setSubcontracts] = useState([]);
+  const [salesOrders, setSalesOrders] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Modals
@@ -34,6 +35,7 @@ export default function ProductionModule() {
   // Forms
   const [lsxForm, setLsxForm] = useState({
     code: '',
+    so_id: '',
     part_name: '',
     drawing_code: '',
     target_qty: 50,
@@ -64,14 +66,16 @@ export default function ProductionModule() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [resLsx, resWip, resSub] = await Promise.all([
+      const [resLsx, resWip, resSub, resSo] = await Promise.all([
         api.get('/production/orders'),
         api.get('/production/wip-movements'),
         api.get('/production/subcontracting'),
+        api.get('/sales/orders').catch(() => ({ data: [] })),
       ]);
       setOrders(resLsx.data || []);
       setMovements(resWip.data || []);
       setSubcontracts(resSub.data || []);
+      setSalesOrders(resSo?.data?.data || resSo?.data || []);
     } catch (err) {
       console.error('Failed to load production data:', err);
     } finally {
@@ -83,6 +87,57 @@ export default function ProductionModule() {
     loadData();
   }, []);
 
+  const handleSelectSoForLsx = (soId) => {
+    if (!soId) {
+      setLsxForm((prev) => ({ ...prev, so_id: '' }));
+      return;
+    }
+    const found = salesOrders.find((s) => String(s.id) === String(soId));
+    if (found) {
+      setLsxForm((prev) => ({
+        ...prev,
+        so_id: found.id,
+        part_name: found.part_name || prev.part_name,
+        drawing_code: found.drawing_code || prev.drawing_code,
+        target_qty: Number(found.order_qty) || prev.target_qty,
+      }));
+    }
+  };
+
+  const handleSelectLsxForWip = (lsxId) => {
+    if (!lsxId) {
+      setWipForm((prev) => ({ ...prev, production_order_id: '' }));
+      return;
+    }
+    const found = orders.find((o) => String(o.id) === String(lsxId));
+    if (found) {
+      const remaining = Math.max(1, (Number(found.target_qty) || 0) - (Number(found.completed_qty) || 0));
+      setWipForm((prev) => ({
+        ...prev,
+        production_order_id: found.id,
+        from_step: found.current_step || prev.from_step,
+        qty_passed: remaining,
+      }));
+    }
+  };
+
+  const handleSelectLsxForSub = (lsxId) => {
+    if (!lsxId) {
+      setSubForm((prev) => ({ ...prev, production_order_id: '' }));
+      return;
+    }
+    const found = orders.find((o) => String(o.id) === String(lsxId));
+    if (found) {
+      const remaining = Math.max(1, (Number(found.target_qty) || 0) - (Number(found.ng_qty) || 0));
+      setSubForm((prev) => ({
+        ...prev,
+        production_order_id: found.id,
+        part_name: found.part_name || prev.part_name,
+        send_qty: remaining,
+      }));
+    }
+  };
+
   const handleCreateLsx = async (e) => {
     e.preventDefault();
     try {
@@ -90,6 +145,7 @@ export default function ProductionModule() {
       setIsLsxModalOpen(false);
       setLsxForm({
         code: '',
+        so_id: '',
         part_name: '',
         drawing_code: '',
         target_qty: 50,
@@ -437,6 +493,25 @@ export default function ProductionModule() {
         }
       >
         <form className="space-y-4">
+          <div className="space-y-1">
+            <Select
+              label="Chọn Đơn hàng SO nguồn (Tự động điền dữ liệu)"
+              value={lsxForm.so_id}
+              onChange={(e) => handleSelectSoForLsx(e.target.value)}
+              options={[
+                { value: '', label: '-- Nhập thủ công (Không liên kết SO) --' },
+                ...salesOrders.map((so) => ({
+                  value: so.id,
+                  label: `${so.code} - ${so.customer_name} (${so.part_name} - SL: ${so.order_qty})`,
+                })),
+              ]}
+            />
+            {lsxForm.so_id && (
+              <p className="text-xs text-blue-600 font-medium mt-1">
+                ✨ Đã tự động điền Tên chi tiết, Mã bản vẽ và Số lượng từ đơn hàng SO đã chọn.
+              </p>
+            )}
+          </div>
           <Input
             label="Chi tiết gia công CNC"
             placeholder="VD: Khuôn ép nhựa / Trục lệch tâm"
@@ -478,7 +553,7 @@ export default function ProductionModule() {
           <Select
             label="Lệnh sản xuất liên quan"
             value={wipForm.production_order_id}
-            onChange={(e) => setWipForm({ ...wipForm, production_order_id: e.target.value })}
+            onChange={(e) => handleSelectLsxForWip(e.target.value)}
             options={[
               { value: '', label: '-- Chọn Lệnh sản xuất --' },
               ...orders.map((o) => ({ value: o.id, label: `${o.code} - ${o.part_name}` })),
@@ -553,6 +628,25 @@ export default function ProductionModule() {
         }
       >
         <form className="space-y-4">
+          <div className="space-y-1">
+            <Select
+              label="Lệnh sản xuất LSX liên quan (Tự động điền chi tiết & số lượng)"
+              value={subForm.production_order_id}
+              onChange={(e) => handleSelectLsxForSub(e.target.value)}
+              options={[
+                { value: '', label: '-- Nhập thủ công (Không liên kết LSX) --' },
+                ...orders.map((o) => ({
+                  value: o.id,
+                  label: `${o.code} - ${o.part_name} (Kế hoạch: ${o.target_qty})`,
+                })),
+              ]}
+            />
+            {subForm.production_order_id && (
+              <p className="text-xs text-blue-600 font-medium mt-1">
+                ✨ Đã tự động điền Tên chi tiết và Số lượng từ Lệnh sản xuất đã chọn.
+              </p>
+            )}
+          </div>
           <Input
             label="Xưởng gia công ngoài / Đối tác"
             placeholder="VD: Xưởng Anode Kim Phát, Nhiệt luyện Đức Minh"
