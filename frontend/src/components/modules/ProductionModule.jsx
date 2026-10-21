@@ -179,22 +179,35 @@ export default function ProductionModule({ initialSubTab }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [resLsx, resWip, resSub, resWs, resSo, resSteps] = await Promise.all([
-        api.get('/production/orders'),
-        api.get('/production/wip-movements'),
-        api.get('/production/subcontracting'),
+      const [resLsx, resWip, resSub, resWs, resSo, resSteps, resParts, resOperators] = await Promise.all([
+        api.get('/production/orders').catch(() => ({ data: [] })),
+        api.get('/production/wip-movements').catch(() => ({ data: [] })),
+        api.get('/production/subcontracting').catch(() => ({ data: [] })),
         api.get('/workshops').catch(() => ({ data: [] })),
         api.get('/sales/orders').catch(() => ({ data: [] })),
         api.get('/production/steps').catch(() => ({ data: [] })),
+        api.get('/sales/parts').catch(() => ({ data: [] })),
+        api.get('/production/operators').catch(() => ({ data: [] })),
       ]);
-      setOrders(resLsx.data || []);
-      setMovements(resWip.data || []);
-      setSubcontracts(resSub.data || []);
-      setWorkshops(resWs.data?.data || resWs.data || []);
-      setSalesOrders(resSo?.data?.data || resSo?.data || []);
-      const fetchedSteps = resSteps.data?.data || resSteps.data || [];
+
+      const parseArray = (res) => {
+        if (!res || !res.data) return [];
+        if (Array.isArray(res.data)) return res.data;
+        if (Array.isArray(res.data.data)) return res.data.data;
+        return [];
+      };
+
+      setOrders(parseArray(resLsx));
+      setMovements(parseArray(resWip));
+      setSubcontracts(parseArray(resSub));
+      setWorkshops(parseArray(resWs));
+      setSalesOrders(parseArray(resSo));
+      setPartsList(parseArray(resParts));
+      setOperators(parseArray(resOperators));
+
+      const fetchedSteps = parseArray(resSteps);
       setCncSteps(
-        Array.isArray(fetchedSteps) && fetchedSteps.length > 0
+        fetchedSteps.length > 0
           ? fetchedSteps
           : STANDARD_CNC_STEPS.map((step, i) => ({
               id: i + 1,
@@ -1696,7 +1709,7 @@ export default function ProductionModule({ initialSubTab }) {
                       {ws ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                           <Building2 className="w-3 h-3" />
-                          <span>{ws.code} - {ws.name.split('(')[0].trim()}</span>
+                          <span>{ws.code} - {(ws.name || '').split('(')[0].trim()}</span>
                         </span>
                       ) : (
                         <span className="text-xs text-slate-400 italic">Chưa phân xưởng</span>

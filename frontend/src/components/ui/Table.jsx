@@ -16,13 +16,17 @@ export default function Table({
   minWidth = 'min-w-[1050px]',
   className = '',
 }) {
+  const safeData = Array.isArray(data)
+    ? data
+    : (data?.data && Array.isArray(data.data) ? data.data : []);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
 
   // Reset to page 1 if data length shrinks
   useEffect(() => {
     setCurrentPage(1);
-  }, [data.length]);
+  }, [safeData.length]);
 
   if (isLoading) {
     return (
@@ -33,7 +37,7 @@ export default function Table({
     );
   }
 
-  if (!data || data.length === 0) {
+  if (!safeData || safeData.length === 0) {
     return (
       <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
         <Inbox className="w-8 h-8 text-slate-300" />
@@ -43,8 +47,8 @@ export default function Table({
   }
 
   const paginatedData = enablePagination
-    ? data.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-    : data;
+    ? safeData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    : safeData;
 
   return (
     <div className={`rounded-xl border border-slate-200 overflow-hidden bg-white shadow-xs ${className}`}>
@@ -65,7 +69,7 @@ export default function Table({
           <tbody className="divide-y divide-slate-100 bg-white">
             {paginatedData.map((row, rowIdx) => (
               <tr
-                key={row.id || rowIdx}
+                key={row?.id || rowIdx}
                 onClick={() => onRowClick && onRowClick(row)}
                 className={`transition-colors hover:bg-slate-50/80 ${onRowClick ? 'cursor-pointer' : ''}`}
               >
@@ -74,7 +78,7 @@ export default function Table({
                     key={colIdx}
                     className={`py-3.5 px-4 text-slate-700 ${col.wrap ? '' : 'whitespace-nowrap'} ${col.cellClassName || ''}`}
                   >
-                    {col.render ? col.render(row, (currentPage - 1) * pageSize + rowIdx) : row[col.accessor]}
+                    {col.render ? col.render(row, (currentPage - 1) * pageSize + rowIdx) : row?.[col.accessor]}
                   </td>
                 ))}
               </tr>
@@ -83,10 +87,10 @@ export default function Table({
         </table>
       </div>
 
-      {enablePagination && data.length > 0 && (
+      {enablePagination && safeData.length > 0 && (
         <Pagination
           currentPage={currentPage}
-          totalItems={data.length}
+          totalItems={safeData.length}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
           onPageSizeChange={(newSize) => {
