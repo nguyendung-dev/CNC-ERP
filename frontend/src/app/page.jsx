@@ -521,6 +521,11 @@ export default function DashboardPage() {
           label: t('nav.sub_production_subcontract', 'Gia Công Ngoài'),
           desc: t('nav.sub_production_subcontract_desc', 'Gửi tiện, mạ, nhiệt luyện đối tác'),
         },
+        {
+          id: 'workshops',
+          label: t('nav.sub_production_workshops', 'Phân Xưởng CNC'),
+          desc: t('nav.sub_production_workshops_desc', 'Thêm, sửa, xóa quy mô xưởng & dàn máy'),
+        },
       ],
     },
     {

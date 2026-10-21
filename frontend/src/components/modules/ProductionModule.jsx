@@ -9,6 +9,7 @@ import {
   Truck, 
   CheckCircle2, 
   Settings,
+  Building2,
   Pencil, 
   ExternalLink,
   Trash2
@@ -55,12 +56,30 @@ export default function ProductionModule({ initialSubTab }) {
     if (initialSubTab) {
       setSubTab(initialSubTab);
     }
-  }, [initialSubTab]); // 'lsx' | 'wip' | 'subcontract'
+  }, [initialSubTab]); // 'lsx' | 'wip' | 'subcontract' | 'workshops'
   const [orders, setOrders] = useState([]);
   const [movements, setMovements] = useState([]);
   const [subcontracts, setSubcontracts] = useState([]);
+  const [workshops, setWorkshops] = useState([]);
   const [salesOrders, setSalesOrders] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Workshop modals & forms
+  const [isAddWorkshopOpen, setIsAddWorkshopOpen] = useState(false);
+  const [isEditWorkshopOpen, setIsEditWorkshopOpen] = useState(false);
+  const [selectedWorkshop, setSelectedWorkshop] = useState(null);
+  const [workshopForm, setWorkshopForm] = useState({
+    code: '',
+    name: '',
+    manager_name: '',
+    phone: '',
+    machine_count: 5,
+    operator_count: 8,
+    main_machines: '',
+    location: '',
+    status: 'active',
+    description: '',
+  });
 
   // Modals
   const [isLsxModalOpen, setIsLsxModalOpen] = useState(false);
@@ -101,15 +120,17 @@ export default function ProductionModule({ initialSubTab }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [resLsx, resWip, resSub, resSo] = await Promise.all([
+      const [resLsx, resWip, resSub, resWs, resSo] = await Promise.all([
         api.get('/production/orders'),
         api.get('/production/wip-movements'),
         api.get('/production/subcontracting'),
+        api.get('/workshops').catch(() => ({ data: [] })),
         api.get('/sales/orders').catch(() => ({ data: [] })),
       ]);
       setOrders(resLsx.data || []);
       setMovements(resWip.data || []);
       setSubcontracts(resSub.data || []);
+      setWorkshops(resWs.data?.data || resWs.data || []);
       setSalesOrders(resSo?.data?.data || resSo?.data || []);
     } catch (err) {
       console.error('Failed to load production data:', err);
@@ -121,6 +142,87 @@ export default function ProductionModule({ initialSubTab }) {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleOpenAddWorkshop = () => {
+    setSelectedWorkshop(null);
+    const nextNum = (workshops.length + 1).toString().padStart(2, '0');
+    setWorkshopForm({
+      code: `X-${nextNum}`,
+      name: '',
+      manager_name: '',
+      phone: '',
+      machine_count: 4,
+      operator_count: 6,
+      main_machines: '',
+      location: '',
+      status: 'active',
+      description: '',
+    });
+    setIsAddWorkshopOpen(true);
+  };
+
+  const handleOpenEditWorkshop = (ws) => {
+    setSelectedWorkshop(ws);
+    setWorkshopForm({
+      code: ws.code || '',
+      name: ws.name || '',
+      manager_name: ws.manager_name || '',
+      phone: ws.phone || '',
+      machine_count: ws.machine_count || 1,
+      operator_count: ws.operator_count || 1,
+      main_machines: ws.main_machines || '',
+      location: ws.location || '',
+      status: ws.status || 'active',
+      description: ws.description || '',
+    });
+    setIsEditWorkshopOpen(true);
+  };
+
+  const handleCreateWorkshop = async (e) => {
+    if (e) e.preventDefault();
+    if (!workshopForm.name.trim()) {
+      showError('Thiếu thông tin', 'Vui lòng nhập tên phân xưởng.');
+      return;
+    }
+    try {
+      await api.post('/workshops', workshopForm);
+      setIsAddWorkshopOpen(false);
+      loadData();
+      showSuccess('Thêm xưởng thành công!', `Phân xưởng "${workshopForm.name}" đã được tạo.`);
+    } catch (err) {
+      showError('Lỗi thêm xưởng', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleUpdateWorkshop = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedWorkshop) return;
+    try {
+      await api.put(`/workshops/${selectedWorkshop.id}`, workshopForm);
+      setIsEditWorkshopOpen(false);
+      loadData();
+      showSuccess('Cập nhật thành công!', `Đã lưu thay đổi cho "${workshopForm.name}".`);
+    } catch (err) {
+      showError('Lỗi cập nhật', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleDeleteWorkshop = (ws) => {
+    confirmDelete({
+      title: 'Xóa Phân Xưởng',
+      itemName: `${ws.name} (${ws.code})`,
+      message: 'Bạn có chắc chắn muốn xóa phân xưởng này khỏi hệ thống không?',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/workshops/${ws.id}`);
+          showSuccess('Đã xóa thành công!', `Phân xưởng "${ws.name}" đã được xóa khỏi hệ thống.`);
+          loadData();
+        } catch (err) {
+          showError('Lỗi xóa phân xưởng', err.response?.data?.message || err.message);
+        }
+      },
+    });
+  };
 
   const handleSelectSoForLsx = (soId) => {
     if (!soId) {
@@ -372,7 +474,19 @@ export default function ProductionModule({ initialSubTab }) {
               {subcontracts.length}
             </span>
           </button>
-          
+          <button
+            onClick={() => setSubTab('workshops')}
+            className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              subTab === 'workshops'
+                ? 'bg-white text-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+            }`}
+          >
+            <span>Phân Xưởng CNC</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${subTab === 'workshops' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'}`}>
+              {workshops.length}
+            </span>
+          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -389,6 +503,11 @@ export default function ProductionModule({ initialSubTab }) {
           {subTab === 'subcontract' && canManageProduction && (
             <Button size="md" icon={Truck} onClick={() => setIsSubModalOpen(true)}>
               Gửi gia công ngoài
+            </Button>
+          )}
+          {subTab === 'workshops' && canManageProduction && (
+            <Button size="md" icon={Plus} onClick={handleOpenAddWorkshop}>
+              Thêm phân xưởng mới
             </Button>
           )}
         </div>
@@ -605,6 +724,100 @@ export default function ProductionModule({ initialSubTab }) {
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
+                </div>
+              ),
+            },
+          ]}
+        />
+      )}
+
+      {/* Workshops SubTab */}
+      {subTab === 'workshops' && (
+        <Table
+          isLoading={loading}
+          data={workshops}
+          emptyMessage="Chưa có phân xưởng nào. Bấm 'Thêm phân xưởng mới' để khởi tạo."
+          columns={[
+            {
+              header: 'Mã Xưởng',
+              accessor: 'code',
+              cellClassName: 'font-mono font-bold text-blue-600',
+            },
+            {
+              header: 'Tên Phân Xưởng',
+              render: (row) => (
+                <div>
+                  <div className="font-bold text-slate-800">{row.name}</div>
+                  {row.description && (
+                    <div className="text-xs text-slate-400 mt-0.5">{row.description}</div>
+                  )}
+                </div>
+              ),
+            },
+            {
+              header: 'Quản Lý & Liên Hệ',
+              render: (row) => (
+                <div className="text-xs">
+                  <div className="font-semibold text-slate-800">{row.manager_name || 'Chưa chỉ định'}</div>
+                  {row.phone && (
+                    <div className="text-slate-500 font-mono mt-0.5">{row.phone}</div>
+                  )}
+                </div>
+              ),
+            },
+            {
+              header: 'Vị Trí / Khu Vực',
+              accessor: 'location',
+              cellClassName: 'text-xs text-slate-600',
+            },
+            {
+              header: 'Quy Mô Máy & Thợ',
+              render: (row) => (
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                    {row.machine_count || 0} máy CNC
+                  </span>
+                  <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                    {row.operator_count || 0} thợ
+                  </span>
+                </div>
+              ),
+            },
+            {
+              header: 'Dàn Thiết Bị Chính',
+              accessor: 'main_machines',
+              cellClassName: 'text-xs text-slate-500',
+            },
+            {
+              header: 'Trạng Thái',
+              render: (row) => (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${row.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600'}`}>
+                  {row.status === 'active' ? '● Hoạt động' : 'Tạm dừng'}
+                </span>
+              ),
+            },
+            {
+              header: 'Thao Tác',
+              render: (row) => (
+                <div className="flex items-center gap-1.5">
+                  {canManageProduction && (
+                    <>
+                      <button
+                        onClick={() => handleOpenEditWorkshop(row)}
+                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                        title="Chỉnh sửa xưởng"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteWorkshop(row)}
+                        className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                        title="Xóa phân xưởng"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
                 </div>
               ),
             },
@@ -861,6 +1074,195 @@ export default function ProductionModule({ initialSubTab }) {
           />
         </form>
       </Modal>
+
+      {/* Add Workshop Modal */}
+      {isAddWorkshopOpen && (
+        <Modal
+          isOpen={isAddWorkshopOpen}
+          onClose={() => setIsAddWorkshopOpen(false)}
+          title="Thêm Phân Xưởng CNC Mới"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setIsAddWorkshopOpen(false)}>Hủy</Button>
+              <Button variant="primary" onClick={handleCreateWorkshop} icon={Plus}>Lưu Phân Xưởng</Button>
+            </>
+          }
+        >
+          <form className="space-y-4" onSubmit={handleCreateWorkshop}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Mã phân xưởng"
+                placeholder="VD: X-04"
+                value={workshopForm.code}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, code: e.target.value })}
+                required
+              />
+              <Input
+                label="Tên phân xưởng"
+                placeholder="VD: Xưởng D (Nhiệt luyện & Mạ màu)"
+                value={workshopForm.name}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Quản đốc / Phụ trách xưởng"
+                placeholder="VD: Lê Văn Sản Xuất"
+                value={workshopForm.manager_name}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, manager_name: e.target.value })}
+              />
+              <Input
+                label="Số điện thoại liên hệ"
+                placeholder="VD: 0918112233"
+                value={workshopForm.phone}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, phone: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Số lượng máy CNC"
+                type="number"
+                value={workshopForm.machine_count}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, machine_count: Number(e.target.value) })}
+                required
+              />
+              <Input
+                label="Số lượng thợ / kỹ sư"
+                type="number"
+                value={workshopForm.operator_count}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, operator_count: Number(e.target.value) })}
+                required
+              />
+            </div>
+
+            <Input
+              label="Dàn máy thiết bị chính"
+              placeholder="VD: 3 Máy Phay CNC Mazak, 2 Máy Tiện Doosan..."
+              value={workshopForm.main_machines}
+              onChange={(e) => setWorkshopForm({ ...workshopForm, main_machines: e.target.value })}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Vị trí / Khu xưởng"
+                placeholder="VD: Khu xưởng 1 - Nhà A"
+                value={workshopForm.location}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, location: e.target.value })}
+              />
+              <Select
+                label="Trạng thái hoạt động"
+                value={workshopForm.status}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, status: e.target.value })}
+                options={[
+                  { value: 'active', label: 'Đang hoạt động' },
+                  { value: 'inactive', label: 'Tạm dừng hoạt động' },
+                ]}
+              />
+            </div>
+
+            <Input
+              label="Mô tả / Năng lực gia công"
+              placeholder="VD: Chuyên gia công phôi thép cứng, phay 4 trục..."
+              value={workshopForm.description}
+              onChange={(e) => setWorkshopForm({ ...workshopForm, description: e.target.value })}
+            />
+          </form>
+        </Modal>
+      )}
+
+      {/* Edit Workshop Modal */}
+      {isEditWorkshopOpen && (
+        <Modal
+          isOpen={isEditWorkshopOpen}
+          onClose={() => setIsEditWorkshopOpen(false)}
+          title={`Chỉnh Sửa Phân Xưởng: ${selectedWorkshop?.name || ''}`}
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setIsEditWorkshopOpen(false)}>Hủy</Button>
+              <Button variant="primary" onClick={handleUpdateWorkshop} icon={Pencil}>Cập Nhật</Button>
+            </>
+          }
+        >
+          <form className="space-y-4" onSubmit={handleUpdateWorkshop}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Mã phân xưởng"
+                value={workshopForm.code}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, code: e.target.value })}
+                required
+              />
+              <Input
+                label="Tên phân xưởng"
+                value={workshopForm.name}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Quản đốc / Phụ trách xưởng"
+                value={workshopForm.manager_name}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, manager_name: e.target.value })}
+              />
+              <Input
+                label="Số điện thoại liên hệ"
+                value={workshopForm.phone}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, phone: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Số lượng máy CNC"
+                type="number"
+                value={workshopForm.machine_count}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, machine_count: Number(e.target.value) })}
+                required
+              />
+              <Input
+                label="Số lượng thợ / kỹ sư"
+                type="number"
+                value={workshopForm.operator_count}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, operator_count: Number(e.target.value) })}
+                required
+              />
+            </div>
+
+            <Input
+              label="Dàn máy thiết bị chính"
+              value={workshopForm.main_machines}
+              onChange={(e) => setWorkshopForm({ ...workshopForm, main_machines: e.target.value })}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Vị trí / Khu xưởng"
+                value={workshopForm.location}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, location: e.target.value })}
+              />
+              <Select
+                label="Trạng thái hoạt động"
+                value={workshopForm.status}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, status: e.target.value })}
+                options={[
+                  { value: 'active', label: 'Đang hoạt động' },
+                  { value: 'inactive', label: 'Tạm dừng hoạt động' },
+                ]}
+              />
+            </div>
+
+            <Input
+              label="Mô tả / Năng lực gia công"
+              value={workshopForm.description}
+              onChange={(e) => setWorkshopForm({ ...workshopForm, description: e.target.value })}
+            />
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

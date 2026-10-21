@@ -17,6 +17,7 @@ const productionRoutes = require('./routes/production.routes');
 const financeRoutes = require('./routes/finance.routes');
 const reportsRoutes = require('./routes/reports.routes');
 const searchRoutes = require('./routes/search.routes');
+const workshopRoutes = require('./routes/workshop.routes');
 
 const app = express();
 const PORT = process.env.PORT || 5002;
@@ -82,6 +83,7 @@ app.use('/api/production', productionRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/workshops', workshopRoutes);
 
 // Root route
 app.get('/', (req, res) => {
