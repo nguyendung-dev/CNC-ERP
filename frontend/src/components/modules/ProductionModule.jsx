@@ -168,7 +168,7 @@ export default function ProductionModule() {
       loadData();
       showSuccess('Luân chuyển BTP thành công', 'Phiếu chuyển công đoạn và kiểm tra NG đã được lưu.');
     } catch (err) {
-      alert(`Lỗi: ${err.message}`);
+      showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
     }
   };
 
@@ -180,7 +180,7 @@ export default function ProductionModule() {
       loadData();
       showSuccess('Gửi gia công ngoài thành công', `Đã lập phiếu gửi gia công chi tiết ${subForm.part_name} tới ${subForm.vendor_name}.`);
     } catch (err) {
-      alert(`Lỗi: ${err.message}`);
+      showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
     }
   };
 
@@ -196,41 +196,59 @@ export default function ProductionModule() {
       loadData();
       showSuccess('Nhận hàng gia công thành công', 'Đã cập nhật số lượng nhập kho QC đạt chuẩn.');
     } catch (err) {
-      alert(`Lỗi: ${err.message}`);
+      showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
     }
   };
 
-  const handleDeleteLsx = async (lsxId) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa Lệnh sản xuất (LSX) này không?')) return;
-    try {
-      await api.delete(`/production/orders/${lsxId}`);
-      alert('Đã xóa lệnh sản xuất LSX thành công!');
-      loadData();
-    } catch (err) {
-      alert(`Lỗi: ${err.message}`);
-    }
+  const handleDeleteLsx = (lsxId) => {
+    confirmDelete({
+      title: 'Xác Nhận Xóa Lệnh Sản Xuất (LSX)',
+      itemName: 'Lệnh sản xuất #' + lsxId,
+      message: 'Bạn có chắc chắn muốn xóa Lệnh sản xuất (LSX) này không?',
+      onConfirm: async () => {
+        try {
+          await api.delete('/production/orders/' + lsxId);
+          showSuccess('Đã xóa thành công!', 'Lệnh sản xuất LSX đã được xóa khỏi hệ thống.');
+          loadData();
+        } catch (err) {
+          showError('Lỗi xóa LSX', err.response?.data?.message || err.message);
+        }
+      },
+    });
   };
 
-  const handleDeleteWip = async (wipId) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa Phiếu luân chuyển BTP này không?')) return;
-    try {
-      await api.delete(`/production/wip-movements/${wipId}`);
-      alert('Đã xóa phiếu luân chuyển BTP thành công!');
-      loadData();
-    } catch (err) {
-      alert(`Lỗi: ${err.message}`);
-    }
+  const handleDeleteWip = (wipId) => {
+    confirmDelete({
+      title: 'Xác Nhận Xóa Phiếu Luân Chuyển BTP',
+      itemName: 'Phiếu BTP #' + wipId,
+      message: 'Bạn có chắc chắn muốn xóa Phiếu luân chuyển BTP này không?',
+      onConfirm: async () => {
+        try {
+          await api.delete('/production/wip-movements/' + wipId);
+          showSuccess('Đã xóa thành công!', 'Phiếu luân chuyển BTP đã được xóa khỏi hệ thống.');
+          loadData();
+        } catch (err) {
+          showError('Lỗi xóa phiếu BTP', err.response?.data?.message || err.message);
+        }
+      },
+    });
   };
 
-  const handleDeleteSubcontract = async (subId) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa Phiếu gia công ngoài này không?')) return;
-    try {
-      await api.delete(`/production/subcontracting/${subId}`);
-      alert('Đã xóa phiếu gia công ngoài thành công!');
-      loadData();
-    } catch (err) {
-      alert(`Lỗi: ${err.message}`);
-    }
+  const handleDeleteSubcontract = (subId) => {
+    confirmDelete({
+      title: 'Xác Nhận Xóa Phiếu Gia Công Ngoài',
+      itemName: 'Phiếu gia công #' + subId,
+      message: 'Bạn có chắc chắn muốn xóa Phiếu gia công ngoài này không?',
+      onConfirm: async () => {
+        try {
+          await api.delete('/production/subcontracting/' + subId);
+          showSuccess('Đã xóa thành công!', 'Phiếu gia công ngoài đã được xóa khỏi hệ thống.');
+          loadData();
+        } catch (err) {
+          showError('Lỗi xóa phiếu gia công', err.response?.data?.message || err.message);
+        }
+      },
+    });
   };
 
   return (

@@ -191,19 +191,19 @@ export default function DashboardPage() {
         showSuccess('Phê duyệt thành công', 'Phiếu đề nghị tạm ứng đã được phê duyệt hợp lệ.');
         loadData();
       } catch (err) {
-        alert(`Lỗi: ${err.message}`);
+        showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
       }
     } else if (task.actionType === 'quotation') {
       try {
         await api.post(`/sales/quotations/${task.id}/convert-to-so`);
-        alert('Đã duyệt báo giá và tạo Đơn đặt hàng (SO)!');
+        showSuccess('Duyệt báo giá thành công!', 'Đã tạo Đơn đặt hàng (SO) từ báo giá.');
         loadData();
       } catch (err) {
-        alert(`Lỗi: ${err.message}`);
+        showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
       }
     } else {
       setPendingTasks(pendingTasks.filter((t) => t.id !== task.id));
-      alert('Đã xử lý công việc!');
+      showSuccess('Xử lý thành công!', 'Đã hoàn thành công việc được giao.');
     }
   };
 
@@ -243,7 +243,7 @@ export default function DashboardPage() {
   const handleRegisterUser = async (e) => {
     e.preventDefault();
     if (user?.role !== 'admin') {
-      alert('Chỉ tài khoản Quản trị viên (Admin) mới có quyền tạo tài khoản nhân viên mới!');
+      showError('Không có quyền', 'Chỉ tài khoản Quản trị viên (Admin) mới có quyền tạo tài khoản nhân viên mới!');
       return;
     }
     setRegSubmitting(true);
@@ -276,51 +276,79 @@ export default function DashboardPage() {
   const [userPage, setUserPage] = useState(1);
   const [userPageSize, setUserPageSize] = useState(5);
   const [editingUser, setEditingUser] = useState(null);
-  const [editUserForm, setEditUserForm] = useState({ full_name: '', role: 'sales' });
+  const [editUserForm, setEditUserForm] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    role: 'sales',
+    status: 'active',
+    password: '',
+  });
   const [editUserSaving, setEditUserSaving] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [showRegPassword, setShowRegPassword] = useState(false);
 
   const handleOpenEditUser = (u) => {
     setEditingUser(u);
-    setEditUserForm({ full_name: u.full_name || '', role: u.role || 'sales' });
+    setEditUserForm({
+      full_name: u?.full_name || '',
+      email: u?.email || '',
+      phone: u?.phone || '',
+      role: u?.role || 'sales',
+      status: u?.status || 'active',
+      password: '',
+    });
   };
 
   const handleSaveEditUser = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!editingUser) return;
     setEditUserSaving(true);
     try {
-      await api.put(`/auth/users/${editingUser.id}`, editUserForm);
-      alert(`Đã cập nhật thông tin tài khoản "${editingUser.username}"!`);
+      const payload = {
+        full_name: editUserForm.full_name,
+        email: editUserForm.email,
+        phone: editUserForm.phone,
+        role: editUserForm.role,
+        status: editUserForm.status,
+      };
+      if (editUserForm.password && editUserForm.password.trim() !== '') {
+        payload.password = editUserForm.password.trim();
+      }
+      await api.put('/auth/users/' + editingUser.id, payload);
+      showSuccess('Cập nhật thành công!', 'Đã cập nhật thông tin tài khoản "' + editingUser.username + '".');
       setEditingUser(null);
       fetchUsers();
     } catch (err) {
-      alert(`Lỗi cập nhật: ${err.message}`);
+      showError('Lỗi cập nhật', err.response?.data?.message || err.message);
     } finally {
       setEditUserSaving(false);
     }
   };
 
-  const handleDeleteUser = async (u) => {
+  const handleDeleteUser = (u) => {
     if (u.id === 1) {
-      alert('Không thể xóa tài khoản Quản trị viên hệ thống mặc định!');
+      showError('Không thể xóa', 'Không thể xóa tài khoản Quản trị viên hệ thống mặc định!');
       return;
     }
     if (u.id === user?.id) {
-      alert('Bạn không thể tự xóa tài khoản của chính mình khi đang đăng nhập!');
+      showError('Không thể xóa', 'Bạn không thể tự xóa tài khoản của chính mình khi đang đăng nhập!');
       return;
     }
-    if (!confirm(`Bạn có chắc chắn muốn xóa tài khoản "${u.full_name}" (@${u.username}) khỏi hệ thống?`)) {
-      return;
-    }
-    try {
-      await api.delete(`/auth/users/${u.id}`);
-      alert(`Đã xóa tài khoản "${u.full_name}" thành công!`);
-      fetchUsers();
-    } catch (err) {
-      alert(`Lỗi xóa: ${err.message}`);
-    }
+    confirmDelete({
+      title: 'Xác Nhận Xóa Tài Khoản Nhân Viên',
+      itemName: u.full_name + ' (@' + u.username + ')',
+      message: 'Bạn có chắc chắn muốn xóa tài khoản "' + u.full_name + '" (@' + u.username + ') khỏi hệ thống không?',
+      onConfirm: async () => {
+        try {
+          await api.delete('/auth/users/' + u.id);
+          showSuccess('Đã xóa thành công!', 'Đã xóa tài khoản "' + u.full_name + '" khỏi hệ thống.');
+          fetchUsers();
+        } catch (err) {
+          showError('Lỗi xóa tài khoản', err.response?.data?.message || err.message);
+        }
+      },
+    });
   };
 
   // Nav items definition (matching reference screenshot: Trang chủ, Bán hàng, ...)

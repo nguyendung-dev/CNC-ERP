@@ -89,6 +89,8 @@ export default function SalesModule() {
 
   const handleCreateQuotation = async (e) => {
     e.preventDefault();
+    const customerName = quotationForm.customer_name;
+    const partName = quotationForm.part_name;
     try {
       await api.post('/sales/quotations', {
         ...quotationForm,
@@ -108,21 +110,29 @@ export default function SalesModule() {
         transport_cost: 0,
       });
       loadData();
+      showSuccess('Tạo báo giá thành công!', 'Báo giá cho chi tiết "' + partName + '" của khách hàng ' + customerName + ' đã được tạo.');
     } catch (err) {
-      alert(`Lỗi: ${err.message}`);
+      showError('Lỗi lập báo giá', err.response?.data?.message || err.message);
     }
   };
 
-  const handleConvertToSO = async (quotationId) => {
-    if (!confirm('Bạn có muốn chuyển Báo giá này thành Đơn đặt hàng (SO) chính thức không?')) return;
-    try {
-      await api.post(`/sales/quotations/${quotationId}/convert-to-so`);
-      alert('Chuyển thành Đơn đặt hàng thành công!');
-      loadData();
-      setActiveSubTab('orders');
-    } catch (err) {
-      alert(`Lỗi: ${err.message}`);
-    }
+  const handleConvertToSO = (quotationId) => {
+    confirmDelete({
+      title: 'Chuyển Đổi Sang Đơn Hàng (SO)',
+      message: 'Bạn có chắc chắn muốn duyệt và chuyển Báo giá này thành Đơn đặt hàng (SO) chính thức không?',
+      confirmText: 'Chuyển thành SO',
+      cancelText: 'Hủy bỏ',
+      onConfirm: async () => {
+        try {
+          await api.post('/sales/quotations/' + quotationId + '/convert-to-so');
+          showSuccess('Chuyển đổi thành công!', 'Báo giá đã được phê duyệt và tạo Đơn đặt hàng (SO).');
+          loadData();
+          setActiveSubTab('orders');
+        } catch (err) {
+          showError('Lỗi chuyển đổi', err.response?.data?.message || err.message);
+        }
+      },
+    });
   };
 
   const handleOpenNewDelivery = () => {
@@ -196,41 +206,59 @@ export default function SalesModule() {
       loadData();
       showSuccess('Xuất kho thành công', 'Phiếu xuất kho giao hàng đã được tạo thành công.');
     } catch (err) {
-      alert(`Lỗi: ${err.message}`);
+      showError('Lỗi xuất kho', err.response?.data?.message || err.message);
     }
   };
 
-  const handleDeleteQuotation = async (quotationId) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa Báo giá này khỏi hệ thống không?')) return;
-    try {
-      await api.delete(`/sales/quotations/${quotationId}`);
-      alert('Đã xóa báo giá thành công!');
-      loadData();
-    } catch (err) {
-      alert(`Lỗi: ${err.message}`);
-    }
+  const handleDeleteQuotation = (quotationId) => {
+    confirmDelete({
+      title: 'Xác Nhận Xóa Báo Giá',
+      itemName: 'Báo giá #' + quotationId,
+      message: 'Bạn có chắc chắn muốn xóa Báo giá này khỏi hệ thống không?',
+      onConfirm: async () => {
+        try {
+          await api.delete('/sales/quotations/' + quotationId);
+          showSuccess('Đã xóa thành công!', 'Báo giá đã được xóa khỏi hệ thống.');
+          loadData();
+        } catch (err) {
+          showError('Lỗi xóa báo giá', err.response?.data?.message || err.message);
+        }
+      },
+    });
   };
 
-  const handleDeleteOrder = async (orderId) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa Đơn đặt hàng (SO) này không?')) return;
-    try {
-      await api.delete(`/sales/orders/${orderId}`);
-      alert('Đã xóa đơn hàng SO thành công!');
-      loadData();
-    } catch (err) {
-      alert(`Lỗi: ${err.message}`);
-    }
+  const handleDeleteOrder = (orderId) => {
+    confirmDelete({
+      title: 'Xác Nhận Xóa Đơn Hàng (SO)',
+      itemName: 'Đơn hàng SO #' + orderId,
+      message: 'Bạn có chắc chắn muốn xóa Đơn đặt hàng (SO) này khỏi hệ thống không?',
+      onConfirm: async () => {
+        try {
+          await api.delete('/sales/orders/' + orderId);
+          showSuccess('Đã xóa thành công!', 'Đơn đặt hàng SO đã được xóa khỏi hệ thống.');
+          loadData();
+        } catch (err) {
+          showError('Lỗi xóa đơn hàng', err.response?.data?.message || err.message);
+        }
+      },
+    });
   };
 
-  const handleDeleteDelivery = async (deliveryId) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa Phiếu giao hàng này không?')) return;
-    try {
-      await api.delete(`/sales/delivery-notes/${deliveryId}`);
-      alert('Đã xóa phiếu xuất kho giao hàng thành công!');
-      loadData();
-    } catch (err) {
-      alert(`Lỗi: ${err.message}`);
-    }
+  const handleDeleteDelivery = (deliveryId) => {
+    confirmDelete({
+      title: 'Xác Nhận Xóa Phiếu Giao Hàng',
+      itemName: 'Phiếu giao hàng #' + deliveryId,
+      message: 'Bạn có chắc chắn muốn xóa Phiếu xuất kho giao hàng này không?',
+      onConfirm: async () => {
+        try {
+          await api.delete('/sales/delivery-notes/' + deliveryId);
+          showSuccess('Đã xóa thành công!', 'Phiếu xuất kho giao hàng đã được xóa khỏi hệ thống.');
+          loadData();
+        } catch (err) {
+          showError('Lỗi xóa phiếu giao hàng', err.response?.data?.message || err.message);
+        }
+      },
+    });
   };
 
   const exportSalesExcel = () => {

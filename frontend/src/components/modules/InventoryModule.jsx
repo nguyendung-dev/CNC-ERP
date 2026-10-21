@@ -87,6 +87,8 @@ export default function InventoryModule() {
 
   const handleCreateMaterial = async (e) => {
     e.preventDefault();
+    const createdName = form.name;
+    const createdCode = form.code;
     try {
       await api.post('/inventory/materials', form);
       setIsAddModalOpen(false);
@@ -103,8 +105,9 @@ export default function InventoryModule() {
         batch_no: '',
       });
       loadData();
+      showSuccess('Tạo vật tư thành công!', 'Vật tư "' + createdName + '" (' + createdCode + ') đã được thêm vào kho.');
     } catch (err) {
-      alert(`Lỗi: ${err.message}`);
+      showError('Lỗi thêm vật tư', err.response?.data?.message || err.message);
     }
   };
 
@@ -117,7 +120,7 @@ export default function InventoryModule() {
       loadData();
       showSuccess('Điều chỉnh kho thành công', 'Số lượng tồn kho thực tế đã được cập nhật.');
     } catch (err) {
-      alert(`Lỗi: ${err.message}`);
+      showError('Lỗi thao tác', err.response?.data?.message || err.message);
     }
   };
 
@@ -156,21 +159,25 @@ export default function InventoryModule() {
       loadData();
       showSuccess('Cập nhật thành công', `Thông tin vật tư ${editForm.name} đã được cập nhật.`);
     } catch (err) {
-      alert(`Lỗi: ${err.message}`);
+      showError('Lỗi cập nhật', err.response?.data?.message || err.message);
     }
   };
 
-  const handleDeleteMaterial = async (material) => {
-    if (!confirm(`Bạn có chắc chắn muốn xóa vật tư "${material.name}" (${material.code}) khỏi kho?`)) {
-      return;
-    }
-    try {
-      await api.delete(`/inventory/materials/${material.id}`);
-      loadData();
-      alert(`Đã xóa vật tư "${material.name}" thành công!`);
-    } catch (err) {
-      alert(`Lỗi: ${err.message}`);
-    }
+  const handleDeleteMaterial = (material) => {
+    confirmDelete({
+      title: 'Xác Nhận Xóa Vật Tư Khỏi Kho',
+      itemName: material.name + ' (' + material.code + ')',
+      message: 'Bạn có chắc chắn muốn xóa vật tư "' + material.name + '" (' + material.code + ') khỏi kho không?',
+      onConfirm: async () => {
+        try {
+          await api.delete('/inventory/materials/' + material.id);
+          loadData();
+          showSuccess('Đã xóa thành công!', 'Vật tư "' + material.name + '" đã được xóa khỏi hệ thống.');
+        } catch (err) {
+          showError('Lỗi xóa vật tư', err.response?.data?.message || err.message);
+        }
+      },
+    });
   };
 
   const filteredMaterials = materials.filter((m) => {

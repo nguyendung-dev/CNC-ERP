@@ -86,7 +86,7 @@ export default function FinanceModule() {
       loadData();
       showSuccess('Tạo tạm ứng thành công', `Đề nghị tạm ứng cho ${advanceForm.requester} đã được tạo.`);
     } catch (err) {
-      alert(`Lỗi: ${err.message}`);
+      showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
     }
   };
 
@@ -96,7 +96,7 @@ export default function FinanceModule() {
       loadData();
       showSuccess('Phê duyệt thành công', 'Phiếu tạm ứng đã được phê duyệt hợp lệ.');
     } catch (err) {
-      alert(`Lỗi: ${err.message}`);
+      showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
     }
   };
 
@@ -138,9 +138,9 @@ export default function FinanceModule() {
         note: '',
       });
       loadData();
-      alert('Lập đề nghị thanh toán thành công!');
+      showSuccess('Tạo thanh toán thành công!', 'Đề nghị thanh toán chi phí đã được gửi phê duyệt.');
     } catch (err) {
-      alert(`Lỗi: ${err.message}`);
+      showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
     }
   };
 
@@ -150,9 +150,9 @@ export default function FinanceModule() {
     try {
       await api.post(`/finance/debts/${debtId}/pay`, { amount: Number(amountStr) });
       loadData();
-      alert('Cập nhật thanh toán công nợ thành công!');
+      showSuccess('Thanh toán thành công!', 'Số tiền công nợ đã được khấu trừ cập nhật.');
     } catch (err) {
-      alert(`Lỗi: ${err.message}`);
+      showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
     }
   };
 
@@ -170,41 +170,59 @@ export default function FinanceModule() {
       loadData();
       showSuccess('Lưu công nợ thành công', `Hồ sơ công nợ của ${debtForm.partner_name} đã được cập nhật.`);
     } catch (err) {
-      alert(`Lỗi: ${err.message}`);
+      showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
     }
   };
 
-  const handleDeleteAdvance = async (id) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa Phiếu tạm ứng này?')) return;
-    try {
-      await api.delete(`/finance/advances/${id}`);
-      loadData();
-      alert('Đã xóa phiếu tạm ứng thành công!');
-    } catch (err) {
-      alert(`Lỗi: ${err.message}`);
-    }
+  const handleDeleteAdvance = (id) => {
+    confirmDelete({
+      title: 'Xác Nhận Xóa Phiếu Tạm Ứng',
+      itemName: 'Phiếu tạm ứng #' + id,
+      message: 'Bạn có chắc chắn muốn xóa Phiếu tạm ứng này khỏi hệ thống không?',
+      onConfirm: async () => {
+        try {
+          await api.delete('/finance/advances/' + id);
+          loadData();
+          showSuccess('Đã xóa thành công!', 'Phiếu tạm ứng đã được xóa khỏi hệ thống.');
+        } catch (err) {
+          showError('Lỗi xóa phiếu tạm ứng', err.response?.data?.message || err.message);
+        }
+      },
+    });
   };
 
-  const handleDeletePayment = async (id) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa Đề nghị thanh toán này?')) return;
-    try {
-      await api.delete(`/finance/payments/${id}`);
-      loadData();
-      alert('Đã xóa phiếu thanh toán thành công!');
-    } catch (err) {
-      alert(`Lỗi: ${err.message}`);
-    }
+  const handleDeletePayment = (id) => {
+    confirmDelete({
+      title: 'Xác Nhận Xóa Đề Nghị Thanh Toán',
+      itemName: 'Phiếu thanh toán #' + id,
+      message: 'Bạn có chắc chắn muốn xóa Đề nghị thanh toán này khỏi hệ thống không?',
+      onConfirm: async () => {
+        try {
+          await api.delete('/finance/payments/' + id);
+          loadData();
+          showSuccess('Đã xóa thành công!', 'Phiếu thanh toán đã được xóa khỏi hệ thống.');
+        } catch (err) {
+          showError('Lỗi xóa phiếu thanh toán', err.response?.data?.message || err.message);
+        }
+      },
+    });
   };
 
-  const handleDeleteDebt = async (id) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa Hồ sơ công nợ này?')) return;
-    try {
-      await api.delete(`/finance/debts/${id}`);
-      loadData();
-      alert('Đã xóa hồ sơ công nợ thành công!');
-    } catch (err) {
-      alert(`Lỗi: ${err.message}`);
-    }
+  const handleDeleteDebt = (id) => {
+    confirmDelete({
+      title: 'Xác Nhận Xóa Hồ Sơ Công Nợ',
+      itemName: 'Hồ sơ công nợ #' + id,
+      message: 'Bạn có chắc chắn muốn xóa Hồ sơ công nợ này khỏi hệ thống không?',
+      onConfirm: async () => {
+        try {
+          await api.delete('/finance/debts/' + id);
+          loadData();
+          showSuccess('Đã xóa thành công!', 'Hồ sơ công nợ đã được xóa khỏi hệ thống.');
+        } catch (err) {
+          showError('Lỗi xóa công nợ', err.response?.data?.message || err.message);
+        }
+      },
+    });
   };
 
   const netPayment = Math.max(
