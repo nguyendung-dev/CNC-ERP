@@ -571,9 +571,6 @@ export default function DashboardPage() {
                       </h3>
                       <p className="text-xs text-slate-400 mt-0.5">Dữ liệu tài khoản lưu trữ thực tế từ MySQL Database</p>
                     </div>
-                    <span className="px-2.5 py-1 bg-blue-50 text-blue-700 text-[11px] font-bold rounded-lg border border-blue-200">
-                      MySQL Active
-                    </span>
                   </div>
 
                     <div className="flex-1 overflow-x-auto">
