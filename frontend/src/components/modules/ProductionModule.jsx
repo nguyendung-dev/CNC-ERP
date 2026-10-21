@@ -622,6 +622,97 @@ export default function ProductionModule({ initialSubTab }) {
       },
     });
   };
+  const handleOpenCreateOperator = (workshopId = '') => {
+    const nextCode = `THO-${String(operators.length + 1).padStart(3, '0')}`;
+    setOperatorForm({
+      code: nextCode,
+      name: '',
+      phone: '',
+      workshop_id: workshopId || (workshops[0]?.id ? String(workshops[0].id) : ''),
+      skill_level: 'Thợ bậc 4/7 - Vận hành Phay/Tiện CNC',
+      shift: 'Ca 1 (Hành chính)',
+      status: 'active',
+      notes: '',
+    });
+    setIsOperatorModalOpen(true);
+  };
+
+  const handleSaveOperator = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!operatorForm.name.trim()) {
+      showError('Thiếu thông tin', 'Vui lòng nhập họ và tên thợ máy.');
+      return;
+    }
+    try {
+      await api.post('/production/operators', {
+        ...operatorForm,
+        workshop_id: operatorForm.workshop_id ? Number(operatorForm.workshop_id) : null,
+      });
+      setIsOperatorModalOpen(false);
+      showSuccess('Thêm thợ máy thành công!', `Thợ máy "${operatorForm.name}" đã được bổ sung vào hệ thống.`);
+      loadData();
+    } catch (err) {
+      showError('Lỗi thêm thợ máy', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleOpenEditOperator = (op) => {
+    setEditOperatorForm({
+      id: op.id,
+      code: op.code,
+      name: op.name,
+      phone: op.phone || '',
+      workshop_id: op.workshop_id ? String(op.workshop_id) : '',
+      skill_level: op.skill_level || '',
+      shift: op.shift || 'Ca 1 (Hành chính)',
+      status: op.status || 'active',
+      notes: op.notes || '',
+    });
+    setIsEditOperatorModalOpen(true);
+  };
+
+  const handleUpdateOperator = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!editOperatorForm.name.trim()) {
+      showError('Thiếu thông tin', 'Vui lòng nhập họ tên thợ máy.');
+      return;
+    }
+    try {
+      await api.put(`/production/operators/${editOperatorForm.id}`, {
+        ...editOperatorForm,
+        workshop_id: editOperatorForm.workshop_id ? Number(editOperatorForm.workshop_id) : null,
+      });
+      setIsEditOperatorModalOpen(false);
+      showSuccess('Cập nhật thành công!', `Đã lưu thông tin cho thợ máy "${editOperatorForm.name}".`);
+      loadData();
+    } catch (err) {
+      showError('Lỗi cập nhật thợ máy', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleDeleteOperator = (op) => {
+    confirmDelete({
+      title: 'Xác Nhận Xóa Thợ Máy CNC',
+      itemName: `${op.code} - ${op.name}`,
+      message: `Bạn có chắc chắn muốn xóa hồ sơ thợ máy "${op.name}" khỏi hệ thống không?`,
+      onConfirm: async () => {
+        try {
+          await api.delete(`/production/operators/${op.id}`);
+          showSuccess('Đã xóa thành công!', `Hồ sơ thợ máy "${op.name}" đã được xóa.`);
+          loadData();
+        } catch (err) {
+          showError('Lỗi xóa thợ máy', err.response?.data?.message || err.message);
+        }
+      },
+    });
+  };
+
+  const handleOpenWorkshopDetail = (ws) => {
+    setSelectedWorkshopForDetail(ws);
+    setIsWorkshopDetailOpen(true);
+  };
+
+
 
   return (
     <div className="space-y-6">
