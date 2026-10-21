@@ -30,6 +30,8 @@ export default function Sidebar({
           const Icon = item.icon;
           const isActive = activeNav === item.id;
           const hasSub = Array.isArray(item.subItems) && item.subItems.length > 0;
+          // Items near the bottom of viewport should open upwards to prevent clipping
+          const isNearBottom = idx >= items.length - 2 || item.id === 'settings' || item.id === 'finance';
 
           return (
             <div key={item.id} className="w-full flex flex-col items-center relative group">
@@ -74,10 +76,12 @@ export default function Sidebar({
                 </span>
               </button>
 
-              {/* Flyout Submenu on Hover */}
+              {/* Flyout Submenu on Hover - Dynamically opens upwards if near bottom */}
               {hasSub && (
                 <div
-                  className="absolute left-full top-0 ml-2 z-50 w-64 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-xl shadow-slate-900/10 p-2 opacity-0 pointer-events-none -translate-x-2 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-x-0 transition-all duration-150 ease-out before:absolute before:-left-3 before:top-0 before:w-3 before:h-full before:content-['']"
+                  className={`absolute left-full ${
+                    isNearBottom ? 'bottom-0' : 'top-0'
+                  } ml-2 z-50 w-64 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-xl shadow-slate-900/10 p-2 opacity-0 pointer-events-none -translate-x-2 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-x-0 transition-all duration-150 ease-out before:absolute before:-left-3 before:top-0 before:w-3 before:h-full before:content-['']`}
                 >
                   {/* Module Title Header */}
                   <div className="px-2.5 py-1.5 border-b border-slate-100 flex items-center justify-between mb-1">
