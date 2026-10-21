@@ -159,6 +159,83 @@ export default function ProductionModule({ initialSubTab }) {
     loadData();
   }, []);
 
+
+  const stepOptions = (cncSteps.length > 0 ? cncSteps : STANDARD_CNC_STEPS.map((s, i) => ({ id: i + 1, step_order: i + 1, name: s.value, assigned_role: s.role, description: s.label }))).map((s, idx) => ({
+    value: s.name,
+    label: `${idx + 1}. ${s.name} (${s.assigned_role || 'Thợ xưởng'})`,
+    role: s.assigned_role,
+    id: s.id,
+    order: s.step_order || idx + 1,
+  }));
+
+  const handleOpenAddStep = () => {
+    setSelectedStep(null);
+    setStepForm({
+      step_order: cncSteps.length + 1,
+      name: '',
+      assigned_role: '',
+      description: '',
+    });
+    setIsAddStepOpen(true);
+  };
+
+  const handleOpenEditStep = (step) => {
+    setSelectedStep(step);
+    setStepForm({
+      step_order: step.step_order || 1,
+      name: step.name || '',
+      assigned_role: step.assigned_role || '',
+      description: step.description || '',
+    });
+    setIsEditStepOpen(true);
+  };
+
+  const handleCreateStep = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!stepForm.name.trim()) {
+      showError('Thiếu thông tin', 'Vui lòng nhập tên công đoạn sản xuất.');
+      return;
+    }
+    try {
+      await api.post('/production/steps', stepForm);
+      setIsAddStepOpen(false);
+      loadData();
+      showSuccess('Thêm công đoạn thành công!', `Công đoạn "${stepForm.name}" đã được đưa vào quy trình sản xuất.`);
+    } catch (err) {
+      showError('Lỗi thêm công đoạn', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleUpdateStep = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!selectedStep) return;
+    try {
+      await api.put(`/production/steps/${selectedStep.id}`, stepForm);
+      setIsEditStepOpen(false);
+      loadData();
+      showSuccess('Cập nhật thành công!', `Công đoạn "${stepForm.name}" đã được cập nhật.`);
+    } catch (err) {
+      showError('Lỗi cập nhật công đoạn', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleDeleteStep = (step) => {
+    confirmDelete({
+      title: 'Xác Nhận Cắt Bỏ / Xóa Công Đoạn',
+      itemName: step.name,
+      message: `Bạn có chắc chắn muốn cắt bỏ công đoạn "${step.name}" khỏi quy trình sản xuất cơ khí CNC không?`,
+      onConfirm: async () => {
+        try {
+          await api.delete(`/production/steps/${step.id}`);
+          loadData();
+          showSuccess('Đã cắt bỏ thành công!', `Công đoạn "${step.name}" đã được loại bỏ khỏi quy trình.`);
+        } catch (err) {
+          showError('Lỗi xóa công đoạn', err.response?.data?.message || err.message);
+        }
+      },
+    });
+  };
+
   const handleOpenAddWorkshop = () => {
     setSelectedWorkshop(null);
     const nextNum = (workshops.length + 1).toString().padStart(2, '0');
@@ -952,10 +1029,7 @@ export default function ProductionModule({ initialSubTab }) {
             label="Công đoạn bắt đầu của LSX"
             value={lsxForm.current_step}
             onChange={(e) => setLsxForm({ ...lsxForm, current_step: e.target.value })}
-            options={STANDARD_CNC_STEPS.map((s) => ({
-              value: s.value,
-              label: s.label,
-            }))}
+            options={stepOptions}
           />
           <Select
             label="Phân xưởng CNC tiếp nhận lệnh gia công"
@@ -1021,10 +1095,7 @@ export default function ProductionModule({ initialSubTab }) {
               label="Chuyển sang công đoạn tiếp theo"
               value={wipForm.to_step}
               onChange={(e) => setWipForm({ ...wipForm, to_step: e.target.value })}
-              options={STANDARD_CNC_STEPS.map((s) => ({
-                value: s.value,
-                label: s.label,
-              }))}
+              options={stepOptions}
               required
             />
           </div>

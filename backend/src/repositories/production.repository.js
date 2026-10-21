@@ -166,6 +166,45 @@ class ProductionRepository {
     await pool.query('DELETE FROM subcontracting_orders WHERE id = ?', [id]);
     return true;
   }
+
+  // Production Steps CRUD
+  async getAllSteps() {
+    const [rows] = await pool.query('SELECT * FROM production_steps ORDER BY step_order ASC, id ASC');
+    return rows;
+  }
+
+  async getStepById(id) {
+    const [rows] = await pool.query('SELECT * FROM production_steps WHERE id = ?', [id]);
+    return rows[0] || null;
+  }
+
+  async createStep(data) {
+    const { step_order, name, assigned_role, description } = data;
+    const [result] = await pool.query(
+      'INSERT INTO production_steps (step_order, name, assigned_role, description) VALUES (?, ?, ?, ?)',
+      [Number(step_order) || 1, name, assigned_role || '', description || '']
+    );
+    return this.getStepById(result.insertId);
+  }
+
+  async updateStep(id, data) {
+    const { step_order, name, assigned_role, description } = data;
+    await pool.query(
+      `UPDATE production_steps SET
+        step_order = COALESCE(?, step_order),
+        name = COALESCE(?, name),
+        assigned_role = COALESCE(?, assigned_role),
+        description = COALESCE(?, description)
+      WHERE id = ?`,
+      [step_order !== undefined ? Number(step_order) : null, name, assigned_role, description, id]
+    );
+    return this.getStepById(id);
+  }
+
+  async deleteStep(id) {
+    await pool.query('DELETE FROM production_steps WHERE id = ?', [id]);
+    return true;
+  }
 }
 
 module.exports = new ProductionRepository();

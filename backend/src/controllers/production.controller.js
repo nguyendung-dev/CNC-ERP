@@ -134,6 +134,43 @@ class ProductionController {
       next(err);
     }
   }
+
+  // Production Steps
+  async getSteps(req, res, next) {
+    try {
+      const data = await productionService.getSteps();
+      res.json({ success: true, count: data.length, data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async createStep(req, res, next) {
+    try {
+      const data = await productionService.createStep(req.body);
+      res.status(201).json({ success: true, message: 'Thêm công đoạn sản xuất mới thành công', data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateStep(req, res, next) {
+    try {
+      const data = await productionService.updateStep(req.params.id, req.body);
+      res.json({ success: true, message: 'Cập nhật công đoạn thành công', data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async deleteStep(req, res, next) {
+    try {
+      await productionService.deleteStep(req.params.id);
+      res.json({ success: true, message: 'Đã xóa / cắt bỏ công đoạn thành công' });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new ProductionController();

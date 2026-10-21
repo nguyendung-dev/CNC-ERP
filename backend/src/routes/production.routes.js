@@ -42,4 +42,11 @@ router.post(
 router.patch('/subcontracting/:id', authorizeRoles('production'), productionController.updateSubcontractingStatus);
 router.delete('/subcontracting/:id', authorizeRoles('production'), productionController.deleteSubcontractingOrder);
 
+
+// Production Steps (Quy trình & Công đoạn - Thêm, xóa, sửa, cắt bỏ)
+router.get('/steps', productionController.getSteps);
+router.post('/steps', authorizeRoles('production', 'admin'), validateBody(['name']), productionController.createStep);
+router.put('/steps/:id', authorizeRoles('production', 'admin'), productionController.updateStep);
+router.delete('/steps/:id', authorizeRoles('production', 'admin'), productionController.deleteStep);
+
 module.exports = router;

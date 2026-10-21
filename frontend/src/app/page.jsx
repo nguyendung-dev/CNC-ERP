@@ -112,7 +112,7 @@ export default function DashboardPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [resAdv, resQuotes, resOrders, resStock, resSub, resStats, resWorkshops, resDeliveries, resPayments] = await Promise.allSettled([
+      const [resAdv, resQuotes, resOrders, resStock, resSub, resStats, resDeliveries, resPayments] = await Promise.allSettled([
         api.get('/finance/advances'),
         api.get('/sales/quotations'),
         api.get('/sales/orders'),

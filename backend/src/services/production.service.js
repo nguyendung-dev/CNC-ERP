@@ -137,6 +137,23 @@ class ProductionService {
   async deleteSubcontractingOrder(id) {
     return await productionRepo.deleteSubcontractingOrder(id);
   }
+
+  // Production Steps
+  async getSteps() {
+    return await productionRepo.getAllSteps();
+  }
+
+  async createStep(data) {
+    return await productionRepo.createStep(data);
+  }
+
+  async updateStep(id, data) {
+    return await productionRepo.updateStep(id, data);
+  }
+
+  async deleteStep(id) {
+    return await productionRepo.deleteStep(id);
+  }
 }
 
 module.exports = new ProductionService();

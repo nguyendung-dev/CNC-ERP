@@ -269,6 +269,32 @@ async function initializeDatabase() {
       `);
     }
 
+    // 12. Production Steps Table (Quy trình & công đoạn CNC - Thêm, xóa, sửa, cắt bỏ)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS production_steps (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        step_order INT NOT NULL DEFAULT 1,
+        name VARCHAR(255) NOT NULL,
+        assigned_role VARCHAR(255) DEFAULT '',
+        description TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    const [existingSteps] = await pool.query('SELECT COUNT(*) as count FROM production_steps');
+    if (existingSteps[0].count === 0) {
+      await pool.query(`
+        INSERT INTO production_steps (step_order, name, assigned_role, description) VALUES
+        (1, 'Cắt phôi', 'Thợ xưởng / Kỹ thuật phôi', 'Cắt phôi thô từ cây/tấm theo kích thước phôi chuẩn'),
+        (2, 'Phay CNC mặt chuẩn', 'Thợ máy Phay CNC', 'Phay CNC lấy chuẩn kích thước, phay thô & tinh mặt chuẩn'),
+        (3, 'Tiện CNC chi tiết', 'Thợ máy Tiện CNC', 'Tiện CNC biên dạng, tiện ren, rãnh then và dung sai trục'),
+        (4, 'Gia công ngoài (Nhiệt luyện/Xi mạ/Anode)', 'Quản đốc xưởng', 'Gửi đối tác xi mạ kẽm, nhiệt luyện tôi cao tần hoặc anode đen cứng'),
+        (5, 'Mài phẳng / Khử ba via', 'Thợ nguội', 'Mài phẳng đạt độ bóng bề mặt và khử bavia mép sắc chi tiết'),
+        (6, 'Kiểm tra KCS / QC', 'Kỹ sư QC / KCS', 'Đo kiểm dung sai bằng CMM, panme, thước kẹp đạt 100% bản vẽ'),
+        (7, 'Hoàn thành & Bàn giao kho', 'Thủ kho / Quản đốc', 'Đóng gói bọc xốp khí, nghiệm thu và nhập kho thành phẩm');
+      `);
+    }
+
     // Check if seed data should be inserted (only if SEED_DEMO=true)
     if (process.env.SEED_DEMO === 'true') {
       const [existingMaterials] = await pool.query('SELECT COUNT(*) as count FROM materials');

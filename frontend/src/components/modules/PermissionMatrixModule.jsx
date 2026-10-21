@@ -359,13 +359,32 @@ export default function PermissionMatrixModule({
   const [moduleFilter, setModuleFilter] = useState('all');
   const isAdmin = user?.role === 'admin';
 
+  // Helper to safely get icon component for a section
+  const getSectionIcon = (sec, secIdx) => {
+    if (typeof sec.icon === 'function') return sec.icon;
+    if (MATRIX_SECTIONS[secIdx]?.icon) return MATRIX_SECTIONS[secIdx].icon;
+    if (sec.module?.includes('Bán Hàng')) return ShoppingCart;
+    if (sec.module?.includes('Kho Phôi')) return Package;
+    if (sec.module?.includes('Sản Xuất')) return Factory;
+    if (sec.module?.includes('Tài Chính')) return CreditCard;
+    if (sec.module?.includes('Báo Cáo') || sec.module?.includes('Quản Trị')) return SlidersHorizontal;
+    return ShieldCheck;
+  };
+
   // Customizable Permission Matrix State (Persisted in localStorage)
   const [matrixData, setMatrixData] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('cnc_erp_permission_matrix');
       if (saved) {
         try {
-          return JSON.parse(saved);
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            // Restore icon components from MATRIX_SECTIONS
+            return parsed.map((sec, idx) => ({
+              ...sec,
+              icon: MATRIX_SECTIONS[idx]?.icon || ShoppingCart,
+            }));
+          }
         } catch (e) {
           console.error('Error loading saved permission matrix:', e);
         }
@@ -577,7 +596,7 @@ export default function PermissionMatrixModule({
           {/* Matrix Tables */}
           <div className="space-y-6">
             {filteredSections.map((sec, secIdx) => {
-              const SecIcon = sec.icon;
+              const SecIcon = getSectionIcon(sec, secIdx);
               return (
                 <div key={secIdx} className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
                   <div className="px-5 py-3.5 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between">
@@ -687,7 +706,7 @@ export default function PermissionMatrixModule({
           {/* Stepper Timeline Cards */}
           <div className="space-y-4">
             {WORKFLOW_STEPS.map((ws) => {
-              const StepIcon = ws.icon;
+              const StepIcon = typeof ws.icon === 'function' ? ws.icon : Workflow;
               return (
                 <div
                   key={ws.step}
