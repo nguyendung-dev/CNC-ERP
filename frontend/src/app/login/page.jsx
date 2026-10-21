@@ -13,7 +13,8 @@ import {
   AlertCircle,
   ShieldCheck,
   CheckCircle2,
-  Zap
+  Zap,
+  ChevronDown
 } from 'lucide-react';
 import { useAuth, QUICK_ACCOUNTS } from '../../context/AuthContext';
 
@@ -30,6 +31,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [isQuickOpen, setIsQuickOpen] = useState(false);
 
   // Clean form state: empty by default
   const [loginForm, setLoginForm] = useState({
@@ -191,40 +193,67 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* Quick Login Section for Testing & Role Verification */}
-            <div className="pt-3.5 border-t border-slate-100">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wide">
-                  <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
-                  Đăng nhập nhanh để test
-                </span>
-                <span className="text-[10px] text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                  Pass: 123456
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                {(QUICK_ACCOUNTS || []).map((acc) => (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleQuickLoginClick(acc.email)}
-                    className={`text-left p-2 rounded-xl border transition group cursor-pointer ${
-                      acc.role === 'admin'
-                        ? 'col-span-2 bg-gradient-to-r from-blue-50 to-indigo-50/70 border-blue-200 hover:border-blue-400'
-                        : 'bg-slate-50/70 hover:bg-white border-slate-200 hover:border-blue-300'
+            {/* Quick Login Collapsible Dropdown for Testing & Role Verification */}
+            <div className="pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsQuickOpen(!isQuickOpen)}
+                className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition cursor-pointer text-left group"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-200">
+                    <Zap className="w-3.5 h-3.5 fill-amber-400" />
+                  </span>
+                  <div>
+                    <span className="text-xs font-bold text-slate-700 group-hover:text-blue-600 transition block leading-tight">
+                      Đăng nhập nhanh để test
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      5 vai trò mẫu • Mật khẩu: 123456
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-blue-600 font-semibold hidden sm:inline">
+                    {isQuickOpen ? 'Thu gọn' : 'Sổ ra'}
+                  </span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-transform duration-200 ${
+                      isQuickOpen ? 'rotate-180 text-blue-600' : ''
                     }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-slate-800 group-hover:text-blue-600 truncate">
-                        {acc.label}
-                      </p>
-                      <ArrowRight className="w-3 h-3 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition shrink-0 ml-1" />
-                    </div>
-                    <p className="text-[10px] text-slate-400 font-mono truncate">{acc.email}</p>
-                  </button>
-                ))}
-              </div>
+                  />
+                </div>
+              </button>
+
+              {/* Collapsible Content (Sổ ra) */}
+              {isQuickOpen && (
+                <div className="mt-2.5 pt-2 border-t border-slate-100/80 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {(QUICK_ACCOUNTS || []).map((acc) => (
+                      <button
+                        key={acc.email}
+                        type="button"
+                        disabled={loading}
+                        onClick={() => handleQuickLoginClick(acc.email)}
+                        className={`text-left p-2.5 rounded-xl border transition group cursor-pointer ${
+                          acc.role === 'admin'
+                            ? 'sm:col-span-2 bg-gradient-to-r from-blue-50 to-indigo-50/70 border-blue-200 hover:border-blue-400 shadow-xs'
+                            : 'bg-slate-50/70 hover:bg-white border-slate-200 hover:border-blue-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-slate-800 group-hover:text-blue-600 truncate">
+                            {acc.label}
+                          </p>
+                          <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition shrink-0 ml-1" />
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-mono truncate mt-0.5">{acc.email}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Admin Policy Notice */}
