@@ -281,6 +281,17 @@ async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    
+    // Add workshop_id to production_steps if not present
+    try {
+      await pool.query('ALTER TABLE production_steps ADD COLUMN workshop_id INT DEFAULT NULL');
+      await pool.query('UPDATE production_steps SET workshop_id = 3 WHERE name LIKE "%Cắt phôi%" OR name LIKE "%Cưa%"');
+      await pool.query('UPDATE production_steps SET workshop_id = 1 WHERE name LIKE "%Phay%" OR name LIKE "%Tiện%"');
+      await pool.query('UPDATE production_steps SET workshop_id = 2 WHERE name LIKE "%Cắt dây%" OR name LIKE "%Mài%"');
+    } catch (e) {
+      // Column already exists
+    }
+  
     const [existingSteps] = await pool.query('SELECT COUNT(*) as count FROM production_steps');
     if (existingSteps[0].count === 0) {
       await pool.query(`

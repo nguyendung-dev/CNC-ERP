@@ -138,7 +138,8 @@ class ProductionController {
   // Production Steps
   async getSteps(req, res, next) {
     try {
-      const data = await productionService.getSteps();
+      const { workshop_id } = req.query;
+      const data = await productionService.getSteps(workshop_id);
       res.json({ success: true, count: data.length, data });
     } catch (err) {
       next(err);

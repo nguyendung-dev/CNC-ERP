@@ -139,8 +139,8 @@ class ProductionService {
   }
 
   // Production Steps
-  async getSteps() {
-    return await productionRepo.getAllSteps();
+  async getSteps(workshopId) {
+    return await productionRepo.getAllSteps(workshopId);
   }
 
   async createStep(data) {

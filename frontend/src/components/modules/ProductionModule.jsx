@@ -12,7 +12,9 @@ import {
   Building2,
   Pencil, 
   ExternalLink,
-  Trash2
+  Trash2,
+  Users,
+  Layers
 } from 'lucide-react';
 import api from '../../api';
 import Table from '../ui/Table';
@@ -122,6 +124,7 @@ export default function ProductionModule({ initialSubTab }) {
     name: '',
     assigned_role: '',
     description: '',
+    workshop_id: '',
   });
 
   // Workshop modals & forms
@@ -248,19 +251,21 @@ export default function ProductionModule({ initialSubTab }) {
 
   const stepOptions = (cncSteps.length > 0 ? cncSteps : STANDARD_CNC_STEPS.map((s, i) => ({ id: i + 1, step_order: i + 1, name: s.value, assigned_role: s.role, description: s.label }))).map((s, idx) => ({
     value: s.name,
-    label: `${idx + 1}. ${s.name} (${s.assigned_role || 'Thợ xưởng'})`,
+    label: `${s.step_order || idx + 1}. ${s.name}${s.workshop_code ? ` [${s.workshop_code}]` : ''} (${s.assigned_role || 'Thợ xưởng'})`,
     role: s.assigned_role,
     id: s.id,
     order: s.step_order || idx + 1,
+    workshop_id: s.workshop_id,
   }));
 
-  const handleOpenAddStep = () => {
+  const handleOpenAddStep = (workshopId = '') => {
     setSelectedStep(null);
     setStepForm({
       step_order: cncSteps.length + 1,
       name: '',
       assigned_role: '',
       description: '',
+      workshop_id: workshopId ? String(workshopId) : '',
     });
     setIsAddStepOpen(true);
   };
@@ -272,6 +277,7 @@ export default function ProductionModule({ initialSubTab }) {
       name: step.name || '',
       assigned_role: step.assigned_role || '',
       description: step.description || '',
+      workshop_id: step.workshop_id ? String(step.workshop_id) : '',
     });
     setIsEditStepOpen(true);
   };
@@ -283,7 +289,10 @@ export default function ProductionModule({ initialSubTab }) {
       return;
     }
     try {
-      await api.post('/production/steps', stepForm);
+      await api.post('/production/steps', {
+        ...stepForm,
+        workshop_id: stepForm.workshop_id ? Number(stepForm.workshop_id) : null,
+      });
       setIsAddStepOpen(false);
       loadData();
       showSuccess('Thêm công đoạn thành công!', `Công đoạn "${stepForm.name}" đã được đưa vào quy trình sản xuất.`);
@@ -296,7 +305,10 @@ export default function ProductionModule({ initialSubTab }) {
     if (e && e.preventDefault) e.preventDefault();
     if (!selectedStep) return;
     try {
-      await api.put(`/production/steps/${selectedStep.id}`, stepForm);
+      await api.put(`/production/steps/${selectedStep.id}`, {
+        ...stepForm,
+        workshop_id: stepForm.workshop_id ? Number(stepForm.workshop_id) : null,
+      });
       setIsEditStepOpen(false);
       loadData();
       showSuccess('Cập nhật thành công!', `Công đoạn "${stepForm.name}" đã được cập nhật.`);
@@ -1075,18 +1087,40 @@ export default function ProductionModule({ initialSubTab }) {
         <Table
           isLoading={loading}
           data={workshops}
+          onRowClick={(row) => handleOpenWorkshopDetail(row)}
           emptyMessage="Chưa có phân xưởng nào. Bấm 'Thêm phân xưởng mới' để khởi tạo."
           columns={[
             {
               header: 'Mã Xưởng',
-              accessor: 'code',
-              cellClassName: 'font-mono font-bold text-blue-600',
+              render: (row) => (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenWorkshopDetail(row);
+                  }}
+                  className="font-mono font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer"
+                  title="Bấm để xem chi tiết & công đoạn xưởng"
+                >
+                  <span>{row.code}</span>
+                  <ExternalLink className="w-3 h-3 opacity-60" />
+                </button>
+              ),
             },
             {
               header: 'Tên Phân Xưởng',
               render: (row) => (
-                <div>
-                  <div className="font-bold text-slate-800">{row.name}</div>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenWorkshopDetail(row);
+                  }}
+                  className="cursor-pointer group"
+                >
+                  <div className="font-bold text-slate-800 group-hover:text-blue-600 transition flex items-center gap-1.5">
+                    <span>{row.name}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 font-normal opacity-0 group-hover:opacity-100 transition">Xem chi tiết</span>
+                  </div>
                   {row.description && (
                     <div className="text-xs text-slate-400 mt-0.5">{row.description}</div>
                   )}
@@ -1110,17 +1144,25 @@ export default function ProductionModule({ initialSubTab }) {
               cellClassName: 'text-xs text-slate-600',
             },
             {
-              header: 'Quy Mô Máy & Thợ',
-              render: (row) => (
-                <div className="flex items-center gap-3 text-xs">
-                  <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                    {row.machine_count || 0} máy CNC
-                  </span>
-                  <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                    {row.operator_count || 0} thợ
-                  </span>
-                </div>
-              ),
+              header: 'Quy Mô & Công Đoạn',
+              render: (row) => {
+                const wsOps = operators.filter((op) => op.workshop_id === row.id);
+                const wsSteps = cncSteps.filter((s) => s.workshop_id === row.id);
+                return (
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                    <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                      {row.machine_count || 0} máy
+                    </span>
+                    <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                      {wsOps.length} thợ
+                    </span>
+                    <span className="font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-100 flex items-center gap-1">
+                      <Layers className="w-3 h-3" />
+                      {wsSteps.length} công đoạn
+                    </span>
+                  </div>
+                );
+              },
             },
             {
               header: 'Dàn Thiết Bị Chính',
@@ -1138,19 +1180,27 @@ export default function ProductionModule({ initialSubTab }) {
             {
               header: 'Thao Tác',
               render: (row) => (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => handleOpenWorkshopDetail(row)}
+                    className="px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition cursor-pointer flex items-center gap-1 border border-blue-200"
+                    title="Xem danh sách thợ máy & công đoạn của xưởng"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Xem xưởng</span>
+                  </button>
                   {canManageProduction && (
                     <>
                       <button
                         onClick={() => handleOpenEditWorkshop(row)}
                         className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
-                        title="Chỉnh sửa xưởng"
+                        title="Chỉnh sửa thông tin xưởng"
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteWorkshop(row)}
-                        className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
                         title="Xóa phân xưởng"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1981,88 +2031,121 @@ export default function ProductionModule({ initialSubTab }) {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL: CHI TIẾT PHÂN XƯỞNG & DANH SÁCH THỢ MÁY CỦA XƯỞNG                   */}
+      {/* MODAL: CHI TIẾT PHÂN XƯỞNG, THỢ MÁY & CÔNG ĐOẠN CỦA XƯỞNG                   */}
       {/* ========================================================================= */}
       <Modal
         isOpen={isWorkshopDetailOpen}
         onClose={() => setIsWorkshopDetailOpen(false)}
         title={selectedWorkshopForDetail ? `Chi Tiết ${selectedWorkshopForDetail.code} - ${selectedWorkshopForDetail.name}` : 'Chi Tiết Phân Xưởng'}
-        size="lg"
+        size="xl"
         footer={
-          <div className="flex items-center justify-between w-full">
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={Plus}
-              onClick={() => {
-                if (selectedWorkshopForDetail) {
-                  handleOpenCreateOperator(String(selectedWorkshopForDetail.id));
-                }
-              }}
-            >
-              + Thêm Thợ Vào Xưởng Này
-            </Button>
+          <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={Plus}
+                onClick={() => {
+                  if (selectedWorkshopForDetail) {
+                    handleOpenCreateOperator(String(selectedWorkshopForDetail.id));
+                  }
+                }}
+              >
+                + Thêm Thợ Vào Xưởng
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Layers}
+                onClick={() => {
+                  if (selectedWorkshopForDetail) {
+                    handleOpenAddStep(String(selectedWorkshopForDetail.id));
+                  }
+                }}
+                className="text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+              >
+                + Thêm Công Đoạn Cho Xưởng
+              </Button>
+            </div>
             <Button variant="ghost" onClick={() => setIsWorkshopDetailOpen(false)}>
               Đóng
             </Button>
           </div>
         }
       >
-        {selectedWorkshopForDetail && (
-          <div className="space-y-6">
-            {/* Workshop Quick Overview Card */}
-            <div className="bg-gradient-to-r from-blue-50/60 to-slate-50 p-4 rounded-2xl border border-blue-100 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs sm:text-sm">
-              <div>
-                <span className="text-slate-500 block text-[11px]">Quản Đốc / Trưởng Ca:</span>
-                <span className="font-bold text-slate-800">{selectedWorkshopForDetail.manager_name || 'Chưa chỉ định'}</span>
-                {selectedWorkshopForDetail.phone && (
-                  <span className="block text-slate-500 font-mono text-xs">{selectedWorkshopForDetail.phone}</span>
-                )}
-              </div>
-              <div>
-                <span className="text-slate-500 block text-[11px]">Vị Trí Mặt Bằng:</span>
-                <span className="font-semibold text-slate-800">{selectedWorkshopForDetail.location || 'Khu xưởng'}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block text-[11px]">Quy Mô Máy Móc:</span>
-                <span className="font-bold text-blue-700">{selectedWorkshopForDetail.machine_count || 1} máy CNC</span>
-              </div>
-              <div className="sm:col-span-3 pt-2 border-t border-blue-100/60">
-                <span className="text-slate-500 block text-[11px]">Dàn Thiết Bị & Máy Móc Chính:</span>
-                <span className="font-medium text-slate-700">{selectedWorkshopForDetail.main_machines || 'Chưa cập nhật'}</span>
-              </div>
-            </div>
+        {selectedWorkshopForDetail && (() => {
+          const currentWs = workshops.find((w) => w.id === selectedWorkshopForDetail.id) || selectedWorkshopForDetail;
+          const wsOperators = operators.filter((op) => op.workshop_id === currentWs.id);
+          const wsSteps = cncSteps
+            .filter((s) => s.workshop_id === currentWs.id)
+            .sort((a, b) => (a.step_order || 0) - (b.step_order || 0));
 
-            {/* Operators of this workshop */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-blue-600" />
-                  <h4 className="text-sm font-bold text-slate-900">
-                    Đội Ngũ Thợ Máy Trực Thuộc ({operators.filter((op) => op.workshop_id === selectedWorkshopForDetail.id).length} Thợ)
-                  </h4>
+          return (
+            <div className="space-y-6">
+              {/* Workshop Quick Overview Card */}
+              <div className="bg-gradient-to-r from-blue-50/60 to-slate-50 p-4 rounded-2xl border border-blue-100 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs sm:text-sm">
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Quản Đốc / Trưởng Ca:</span>
+                  <span className="font-bold text-slate-800">{currentWs.manager_name || 'Chưa chỉ định'}</span>
+                  {currentWs.phone && (
+                    <span className="block text-slate-500 font-mono text-xs">{currentWs.phone}</span>
+                  )}
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Vị Trí Mặt Bằng:</span>
+                  <span className="font-semibold text-slate-800">{currentWs.location || 'Khu xưởng'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Quy Mô Máy Móc:</span>
+                  <span className="font-bold text-blue-700">{currentWs.machine_count || 1} máy CNC</span>
+                </div>
+                <div className="sm:col-span-3 pt-2 border-t border-blue-100/60">
+                  <span className="text-slate-500 block text-[11px]">Dàn Thiết Bị & Máy Móc Chính:</span>
+                  <span className="font-medium text-slate-700">{currentWs.main_machines || 'Chưa cập nhật'}</span>
                 </div>
               </div>
 
-              {operators.filter((op) => op.workshop_id === selectedWorkshopForDetail.id).length === 0 ? (
-                <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                  <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                  <p className="text-xs text-slate-500">Chưa có thợ máy nào được phân công vào xưởng này.</p>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="mt-3"
-                    icon={Plus}
-                    onClick={() => handleOpenCreateOperator(String(selectedWorkshopForDetail.id))}
-                  >
-                    Thêm thợ đầu tiên vào xưởng
-                  </Button>
+              {/* SECTION 1: Operators of this workshop */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-blue-600" />
+                    <h4 className="text-sm font-bold text-slate-900">
+                      1. Đội Ngũ Thợ Máy Trực Thuộc ({wsOperators.length} Thợ)
+                    </h4>
+                  </div>
+                  {canManageProduction && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={Plus}
+                      onClick={() => handleOpenCreateOperator(String(currentWs.id))}
+                      className="text-xs"
+                    >
+                      + Thêm Thợ
+                    </Button>
+                  )}
                 </div>
-              ) : (
-                <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
-                  {operators
-                    .filter((op) => op.workshop_id === selectedWorkshopForDetail.id)
-                    .map((op) => (
+
+                {wsOperators.length === 0 ? (
+                  <div className="text-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                    <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-xs text-slate-500">Chưa có thợ máy nào được phân công vào xưởng này.</p>
+                    {canManageProduction && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="mt-3"
+                        icon={Plus}
+                        onClick={() => handleOpenCreateOperator(String(currentWs.id))}
+                      >
+                        Thêm thợ đầu tiên vào xưởng
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
+                    {wsOperators.map((op) => (
                       <div key={op.id} className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 transition">
                         <div className="flex items-start gap-3">
                           <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm shrink-0">
@@ -2087,29 +2170,275 @@ export default function ProductionModule({ initialSubTab }) {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5 self-end sm:self-center">
-                          <button
-                            onClick={() => handleOpenEditOperator(op)}
-                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
-                            title="Chỉnh sửa thợ"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteOperator(op)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
-                            title="Xóa thợ"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        {canManageProduction && (
+                          <div className="flex items-center gap-1.5 self-end sm:self-center">
+                            <button
+                              onClick={() => handleOpenEditOperator(op)}
+                              className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                              title="Chỉnh sửa thợ"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteOperator(op)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                              title="Xóa thợ"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION 2: Production Steps of this workshop */}
+              <div className="pt-4 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-emerald-600" />
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">
+                        2. Các Công Đoạn Gia Công Chuyên Trách ({wsSteps.length} Công đoạn)
+                      </h4>
+                      <p className="text-[11px] text-slate-400">Các bước sản xuất do dàn máy và thợ của phân xưởng này đảm nhiệm thực hiện</p>
+                    </div>
+                  </div>
+                  {canManageProduction && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      icon={Plus}
+                      onClick={() => handleOpenAddStep(String(currentWs.id))}
+                      className="text-xs bg-emerald-600 hover:bg-emerald-700 border-none text-white shadow-xs"
+                    >
+                      + Thêm Công Đoạn
+                    </Button>
+                  )}
                 </div>
-              )}
+
+                {wsSteps.length === 0 ? (
+                  <div className="text-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                    <Layers className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-xs text-slate-500 font-medium">Chưa có công đoạn nào được gán chuyên trách cho phân xưởng này.</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Bấm nút bên dưới để thêm công đoạn gia công mới trực thuộc xưởng.</p>
+                    {canManageProduction && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="mt-3 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        icon={Plus}
+                        onClick={() => handleOpenAddStep(String(currentWs.id))}
+                      >
+                        Thêm công đoạn đầu tiên cho xưởng
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
+                    {wsSteps.map((step) => (
+                      <div key={step.id} className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-emerald-50/30 transition">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-xs shrink-0 shadow-xs">
+                            #{step.step_order}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900 text-sm">{step.name}</span>
+                              <span className="text-[10px] font-mono font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded">
+                                {currentWs.code}
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-600 mt-1 font-medium flex flex-wrap items-center gap-2">
+                              <span className="text-slate-400">Tổ máy / Thợ phụ trách:</span>
+                              <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px] font-medium border border-slate-200">
+                                {step.assigned_role || 'Chưa chỉ định tổ máy'}
+                              </span>
+                            </div>
+                            {step.description && (
+                              <p className="text-xs text-slate-500 mt-1.5 italic bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                {step.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {canManageProduction && (
+                          <div className="flex items-center gap-1.5 self-end sm:self-center">
+                            <button
+                              onClick={() => handleOpenEditStep(step)}
+                              className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                              title="Chỉnh sửa công đoạn này"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteStep(step)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                              title="Xóa công đoạn này"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: THÊM CÔNG ĐOẠN SẢN XUẤT MỚI                                         */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={isAddStepOpen}
+        onClose={() => setIsAddStepOpen(false)}
+        title="Thêm Công Đoạn Gia Công Sản Xuất Mới"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsAddStepOpen(false)}>
+              Hủy
+            </Button>
+            <Button variant="primary" onClick={handleCreateStep} icon={Plus}>
+              Thêm Công Đoạn
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleCreateStep} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <Input
+                label="Thứ tự bước (#)"
+                type="number"
+                min="1"
+                value={stepForm.step_order}
+                onChange={(e) => setStepForm({ ...stepForm, step_order: parseInt(e.target.value, 10) || 1 })}
+                required
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Input
+                label="Tên Công Đoạn Gia Công"
+                placeholder="VD: Cắt dây EDM rãnh khuôn, Phay CNC mặt chuẩn..."
+                value={stepForm.name}
+                onChange={(e) => setStepForm({ ...stepForm, name: e.target.value })}
+                required
+              />
             </div>
           </div>
-        )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Phân Xưởng CNC Phụ Trách
+              </label>
+              <select
+                value={stepForm.workshop_id}
+                onChange={(e) => setStepForm({ ...stepForm, workshop_id: e.target.value })}
+                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+              >
+                <option value="">-- Dùng chung / Không cố định xưởng --</option>
+                {workshops.map((w) => (
+                  <option key={w.id} value={String(w.id)}>
+                    {w.code} - {w.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Input
+              label="Tổ Máy / Thợ Phụ Trách Đảm Nhiệm"
+              placeholder="VD: Thợ máy Phay CNC, Thợ Cắt Dây EDM..."
+              value={stepForm.assigned_role}
+              onChange={(e) => setStepForm({ ...stepForm, assigned_role: e.target.value })}
+            />
+          </div>
+
+          <Input
+            label="Mô Tả Chi Tiết / Tiêu Chuẩn Kỹ Thuật"
+            placeholder="VD: Rà gá chuẩn phôi, chạy dao thô D16, chạy tinh dung sai ±0.01mm..."
+            value={stepForm.description}
+            onChange={(e) => setStepForm({ ...stepForm, description: e.target.value })}
+          />
+        </form>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: CHỈNH SỬA CÔNG ĐOẠN SẢN XUẤT                                       */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={isEditStepOpen}
+        onClose={() => setIsEditStepOpen(false)}
+        title="Chỉnh Sửa Công Đoạn Sản Xuất"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsEditStepOpen(false)}>
+              Hủy
+            </Button>
+            <Button variant="primary" onClick={handleUpdateStep} icon={Pencil}>
+              Cập Nhật Công Đoạn
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleUpdateStep} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <Input
+                label="Thứ tự bước (#)"
+                type="number"
+                min="1"
+                value={stepForm.step_order}
+                onChange={(e) => setStepForm({ ...stepForm, step_order: parseInt(e.target.value, 10) || 1 })}
+                required
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Input
+                label="Tên Công Đoạn Gia Công"
+                value={stepForm.name}
+                onChange={(e) => setStepForm({ ...stepForm, name: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Phân Xưởng CNC Phụ Trách
+              </label>
+              <select
+                value={stepForm.workshop_id}
+                onChange={(e) => setStepForm({ ...stepForm, workshop_id: e.target.value })}
+                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+              >
+                <option value="">-- Dùng chung / Không cố định xưởng --</option>
+                {workshops.map((w) => (
+                  <option key={w.id} value={String(w.id)}>
+                    {w.code} - {w.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Input
+              label="Tổ Máy / Thợ Phụ Trách Đảm Nhiệm"
+              value={stepForm.assigned_role}
+              onChange={(e) => setStepForm({ ...stepForm, assigned_role: e.target.value })}
+            />
+          </div>
+
+          <Input
+            label="Mô Tả Chi Tiết / Tiêu Chuẩn Kỹ Thuật"
+            value={stepForm.description}
+            onChange={(e) => setStepForm({ ...stepForm, description: e.target.value })}
+          />
+        </form>
       </Modal>
 
       {/* ========================================================================= */}

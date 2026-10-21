@@ -168,35 +168,60 @@ class ProductionRepository {
   }
 
   // Production Steps CRUD
-  async getAllSteps() {
-    const [rows] = await pool.query('SELECT * FROM production_steps ORDER BY step_order ASC, id ASC');
+  async getAllSteps(workshopId) {
+    let query = `
+      SELECT s.*, w.name as workshop_name, w.code as workshop_code
+      FROM production_steps s
+      LEFT JOIN workshops w ON s.workshop_id = w.id
+    `;
+    const params = [];
+    if (workshopId) {
+      query += ' WHERE s.workshop_id = ?';
+      params.push(workshopId);
+    }
+    query += ' ORDER BY s.step_order ASC, s.id ASC';
+    const [rows] = await pool.query(query, params);
     return rows;
   }
 
   async getStepById(id) {
-    const [rows] = await pool.query('SELECT * FROM production_steps WHERE id = ?', [id]);
+    const [rows] = await pool.query(
+      `SELECT s.*, w.name as workshop_name, w.code as workshop_code
+       FROM production_steps s
+       LEFT JOIN workshops w ON s.workshop_id = w.id
+       WHERE s.id = ?`,
+      [id]
+    );
     return rows[0] || null;
   }
 
   async createStep(data) {
-    const { step_order, name, assigned_role, description } = data;
+    const { step_order, name, assigned_role, description, workshop_id } = data;
     const [result] = await pool.query(
-      'INSERT INTO production_steps (step_order, name, assigned_role, description) VALUES (?, ?, ?, ?)',
-      [Number(step_order) || 1, name, assigned_role || '', description || '']
+      'INSERT INTO production_steps (step_order, name, assigned_role, description, workshop_id) VALUES (?, ?, ?, ?, ?)',
+      [Number(step_order) || 1, name, assigned_role || '', description || '', workshop_id ? Number(workshop_id) : null]
     );
     return this.getStepById(result.insertId);
   }
 
   async updateStep(id, data) {
-    const { step_order, name, assigned_role, description } = data;
+    const { step_order, name, assigned_role, description, workshop_id } = data;
     await pool.query(
       `UPDATE production_steps SET
         step_order = COALESCE(?, step_order),
         name = COALESCE(?, name),
         assigned_role = COALESCE(?, assigned_role),
-        description = COALESCE(?, description)
+        description = COALESCE(?, description),
+        workshop_id = ?
       WHERE id = ?`,
-      [step_order !== undefined ? Number(step_order) : null, name, assigned_role, description, id]
+      [
+        step_order !== undefined ? Number(step_order) : null,
+        name,
+        assigned_role,
+        description,
+        workshop_id !== undefined ? (workshop_id ? Number(workshop_id) : null) : null,
+        id
+      ]
     );
     return this.getStepById(id);
   }
