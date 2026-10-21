@@ -503,7 +503,7 @@ export default function SalesModule({ initialSubTab }) {
               header: 'Thao tác',
               render: (row) => (
                 <div className="flex items-center gap-1.5">
-                  {row.status !== 'converted_to_so' ? (
+                  {row.status !== 'converted_to_so' && (
                     <Button
                       onClick={() => handleConvertToSO(row)}
                       size="sm"
@@ -512,10 +512,6 @@ export default function SalesModule({ initialSubTab }) {
                     >
                       Tạo SO
                     </Button>
-                  ) : (
-                    <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Đã chuyển SO
-                    </span>
                   )}
                   <button
                     onClick={() => handleDeleteQuotation(row.id)}
@@ -670,11 +666,7 @@ export default function SalesModule({ initialSubTab }) {
                       Kiểm hàng & Xuất kho
                     </Button>
                   )}
-                  {row.status === 'pending_warehouse' && user?.role === 'sales' && (
-                    <span className="text-xs text-amber-600 italic font-medium px-2 py-1 bg-amber-50/60 rounded border border-amber-100">
-                      Chờ Thủ kho xuất
-                    </span>
-                  )}
+
                   {canManageDeliveries && (
                     <button
                       onClick={() => handleDeleteDelivery(row.id)}

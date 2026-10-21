@@ -1294,51 +1294,56 @@ export default function DashboardPage() {
                     </span>
                   </div>
 
-                  <div className="py-2.5">
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <span className="text-xs text-slate-500 font-medium">Chọn phân xưởng CNC:</span>
+                  {workshops.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-slate-400">
+                      Chưa có phân xưởng nào trong cơ sở dữ liệu.
                       <button
-                        onClick={() => setActiveNav('production')}
-                        className="text-[11px] text-blue-600 hover:underline font-semibold"
+                        onClick={() => handleNavChange('production', 'workshops')}
+                        className="text-blue-600 font-semibold hover:underline block mx-auto mt-1"
                       >
-                        Quản lý xưởng ➔
+                        + Khởi tạo phân xưởng ngay
                       </button>
                     </div>
-                    <select
-                      value={selectedWorkshopId || (workshops[0]?.id || '')}
-                      onChange={(e) => setSelectedWorkshopId(Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    >
-                      {workshops.map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {w.code} - {w.name} ({w.machine_count} máy | {w.operator_count} thợ)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {(() => {
-                    const currentWs = workshops.find(w => w.id === selectedWorkshopId) || workshops[0] || {
-                      name: 'Xưởng A (Phay Mazak, Tiện Doosan)',
-                      manager_name: 'Lê Văn Sản Xuất',
-                      machine_count: 5,
-                      operator_count: 8,
-                      main_machines: '3 Máy Phay CNC Mazak VCN-530C, 2 Máy Tiện Doosan Lynx 220',
-                      location: 'Khu xưởng 1 - Nhà A',
-                      status: 'active'
-                    };
-
-                    return (
-                      <>
-                        <div className="p-2.5 bg-slate-50 rounded-xl text-xs space-y-1 mb-2 border border-slate-100">
-                          <div className="flex justify-between text-slate-600">
-                            <span>Quản đốc: <strong className="text-slate-800">{currentWs.manager_name}</strong></span>
-                            <span className="text-slate-400 font-mono">{currentWs.phone || ''}</span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 truncate" title={currentWs.main_machines}>
-                            Máy chính: {currentWs.main_machines}
-                          </p>
+                  ) : (
+                    <>
+                      <div className="py-2.5">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className="text-xs text-slate-500 font-medium">Chọn phân xưởng CNC:</span>
+                          <button
+                            onClick={() => handleNavChange('production', 'workshops')}
+                            className="text-[11px] text-blue-600 hover:underline font-semibold"
+                          >
+                            Quản lý xưởng ➔
+                          </button>
                         </div>
+                        <select
+                          value={selectedWorkshopId || (workshops[0]?.id || '')}
+                          onChange={(e) => setSelectedWorkshopId(Number(e.target.value))}
+                          className="w-full px-3 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        >
+                          {workshops.map((w) => (
+                            <option key={w.id} value={w.id}>
+                              {w.code} - {w.name} ({w.machine_count} máy | {w.operator_count} thợ)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {(() => {
+                        const currentWs = workshops.find(w => w.id === selectedWorkshopId) || workshops[0];
+                        if (!currentWs) return null;
+
+                        return (
+                          <>
+                            <div className="p-2.5 bg-slate-50 rounded-xl text-xs space-y-1 mb-2 border border-slate-100">
+                              <div className="flex justify-between text-slate-600">
+                                <span>Quản đốc: <strong className="text-slate-800">{currentWs.manager_name || 'Chưa chỉ định'}</strong></span>
+                                <span className="text-slate-400 font-mono">{currentWs.phone || ''}</span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 truncate" title={currentWs.main_machines}>
+                                Máy chính: {currentWs.main_machines || 'Chưa có thông tin'}
+                              </p>
+                            </div>
 
                         {/* 3 Metrics Boxes */}
                         <div className="grid grid-cols-3 gap-2.5 my-3">
@@ -1394,6 +1399,8 @@ export default function DashboardPage() {
                       Xuất phôi / Dao
                     </button>
                   </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Widget 2: Cảnh báo Vật tư thiếu (MRP) & Gia công ngoài */}

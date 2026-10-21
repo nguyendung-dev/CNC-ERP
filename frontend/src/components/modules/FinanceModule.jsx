@@ -331,14 +331,10 @@ export default function FinanceModule({ initialSubTab }) {
               header: 'Thao tác',
               render: (row) => (
                 <div className="flex items-center gap-1.5">
-                  {row.status === 'pending' ? (
+                  {row.status === 'pending' && (
                     <Button size="sm" variant="success" onClick={() => handleApproveAdvance(row.id)}>
                       Duyệt chi
                     </Button>
-                  ) : (
-                    <span className="text-xs text-emerald-600 flex items-center gap-1 font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Đã duyệt
-                    </span>
                   )}
                   <button
                     onClick={() => handleDeleteAdvance(row.id)}
@@ -445,18 +441,24 @@ export default function FinanceModule({ initialSubTab }) {
             { header: 'Hạn thanh toán', accessor: 'due_date', cellClassName: 'text-xs font-mono' },
             {
               header: 'Trạng thái',
-              render: (row) => <Badge status={row.status}>{row.status}</Badge>,
+              render: (row) => {
+                const isPaid = Number(row.remaining_amount) <= 0;
+                const isPartial = Number(row.paid_amount) > 0;
+                return (
+                  <Badge status={isPaid ? 'paid' : (isPartial ? 'partial' : 'unpaid')}>
+                    {isPaid ? 'Đã tất toán' : (isPartial ? 'Đang trả dở dang' : 'Chưa thanh toán')}
+                  </Badge>
+                );
+              },
             },
             {
               header: 'Thao tác',
               render: (row) => (
                 <div className="flex items-center gap-1.5">
-                  {row.remaining_amount > 0 ? (
+                  {Number(row.remaining_amount) > 0 && (
                     <Button size="sm" variant="secondary" onClick={() => openPayModal(row)}>
                       Ghi nhận trả
                     </Button>
-                  ) : (
-                    <span className="text-xs text-emerald-600 font-medium">Đã tất toán</span>
                   )}
                   <button
                     onClick={() => handleDeleteDebt(row.id)}

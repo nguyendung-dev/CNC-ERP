@@ -284,8 +284,10 @@ export default function ProductionModule({ initialSubTab }) {
   };
 
   const handleOpenAddWorkshop = () => {
+    setSelectedWorkshop(null);
+    const nextNum = (workshops.length + 1).toString().padStart(2, '0');
     setWorkshopForm({
-      code: 'X-' + Date.now().toString().slice(-3),
+      code: `X-${nextNum}`,
       name: '',
       manager_name: '',
       phone: '',
@@ -638,7 +640,7 @@ export default function ProductionModule({ initialSubTab }) {
               header: 'Thao tác',
               render: (row) => (
                 <div className="flex items-center gap-1.5">
-                  {row.status === 'sent' ? (
+                  {row.status === 'sent' && canManageProduction && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -646,10 +648,6 @@ export default function ProductionModule({ initialSubTab }) {
                     >
                       Nhận hàng & QC
                     </Button>
-                  ) : (
-                    <span className="text-xs text-emerald-600 flex items-center gap-1 font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Đã nhận & QC
-                    </span>
                   )}
                   <button
                     onClick={() => handleDeleteSubcontract(row.id)}
@@ -978,6 +976,195 @@ export default function ProductionModule({ initialSubTab }) {
           />
         </form>
       </Modal>
+
+      {/* Add Workshop Modal */}
+      {isAddWorkshopOpen && (
+        <Modal
+          isOpen={isAddWorkshopOpen}
+          onClose={() => setIsAddWorkshopOpen(false)}
+          title="Thêm Phân Xưởng CNC Mới"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setIsAddWorkshopOpen(false)}>Hủy</Button>
+              <Button variant="primary" onClick={handleCreateWorkshop} icon={Plus}>Lưu Phân Xưởng</Button>
+            </>
+          }
+        >
+          <form className="space-y-4" onSubmit={handleCreateWorkshop}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Mã phân xưởng"
+                placeholder="VD: X-04"
+                value={workshopForm.code}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, code: e.target.value })}
+                required
+              />
+              <Input
+                label="Tên phân xưởng"
+                placeholder="VD: Xưởng D (Nhiệt luyện & Mạ màu)"
+                value={workshopForm.name}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Quản đốc / Phụ trách xưởng"
+                placeholder="VD: Lê Văn Sản Xuất"
+                value={workshopForm.manager_name}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, manager_name: e.target.value })}
+              />
+              <Input
+                label="Số điện thoại liên hệ"
+                placeholder="VD: 0918112233"
+                value={workshopForm.phone}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, phone: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Số lượng máy CNC"
+                type="number"
+                value={workshopForm.machine_count}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, machine_count: Number(e.target.value) })}
+                required
+              />
+              <Input
+                label="Số lượng thợ / kỹ sư"
+                type="number"
+                value={workshopForm.operator_count}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, operator_count: Number(e.target.value) })}
+                required
+              />
+            </div>
+
+            <Input
+              label="Dàn máy thiết bị chính"
+              placeholder="VD: 3 Máy Phay CNC Mazak, 2 Máy Tiện Doosan..."
+              value={workshopForm.main_machines}
+              onChange={(e) => setWorkshopForm({ ...workshopForm, main_machines: e.target.value })}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Vị trí / Khu xưởng"
+                placeholder="VD: Khu xưởng 1 - Nhà A"
+                value={workshopForm.location}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, location: e.target.value })}
+              />
+              <Select
+                label="Trạng thái hoạt động"
+                value={workshopForm.status}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, status: e.target.value })}
+                options={[
+                  { value: 'active', label: 'Đang hoạt động' },
+                  { value: 'inactive', label: 'Tạm dừng hoạt động' },
+                ]}
+              />
+            </div>
+
+            <Input
+              label="Mô tả / Năng lực gia công"
+              placeholder="VD: Chuyên gia công phôi thép cứng, phay 4 trục..."
+              value={workshopForm.description}
+              onChange={(e) => setWorkshopForm({ ...workshopForm, description: e.target.value })}
+            />
+          </form>
+        </Modal>
+      )}
+
+      {/* Edit Workshop Modal */}
+      {isEditWorkshopOpen && (
+        <Modal
+          isOpen={isEditWorkshopOpen}
+          onClose={() => setIsEditWorkshopOpen(false)}
+          title={`Chỉnh Sửa Phân Xưởng: ${selectedWorkshop?.name || ''}`}
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setIsEditWorkshopOpen(false)}>Hủy</Button>
+              <Button variant="primary" onClick={handleUpdateWorkshop} icon={Pencil}>Cập Nhật</Button>
+            </>
+          }
+        >
+          <form className="space-y-4" onSubmit={handleUpdateWorkshop}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Mã phân xưởng"
+                value={workshopForm.code}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, code: e.target.value })}
+                required
+              />
+              <Input
+                label="Tên phân xưởng"
+                value={workshopForm.name}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Quản đốc / Phụ trách xưởng"
+                value={workshopForm.manager_name}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, manager_name: e.target.value })}
+              />
+              <Input
+                label="Số điện thoại liên hệ"
+                value={workshopForm.phone}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, phone: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Số lượng máy CNC"
+                type="number"
+                value={workshopForm.machine_count}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, machine_count: Number(e.target.value) })}
+                required
+              />
+              <Input
+                label="Số lượng thợ / kỹ sư"
+                type="number"
+                value={workshopForm.operator_count}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, operator_count: Number(e.target.value) })}
+                required
+              />
+            </div>
+
+            <Input
+              label="Dàn máy thiết bị chính"
+              value={workshopForm.main_machines}
+              onChange={(e) => setWorkshopForm({ ...workshopForm, main_machines: e.target.value })}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Vị trí / Khu xưởng"
+                value={workshopForm.location}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, location: e.target.value })}
+              />
+              <Select
+                label="Trạng thái hoạt động"
+                value={workshopForm.status}
+                onChange={(e) => setWorkshopForm({ ...workshopForm, status: e.target.value })}
+                options={[
+                  { value: 'active', label: 'Đang hoạt động' },
+                  { value: 'inactive', label: 'Tạm dừng hoạt động' },
+                ]}
+              />
+            </div>
+
+            <Input
+              label="Mô tả / Năng lực gia công"
+              value={workshopForm.description}
+              onChange={(e) => setWorkshopForm({ ...workshopForm, description: e.target.value })}
+            />
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }
