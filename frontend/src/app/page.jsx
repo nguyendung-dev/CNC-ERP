@@ -106,15 +106,15 @@ export default function DashboardPage() {
         api.get('/reports/dashboard'),
       ]);
 
-      const advances = resAdv.data || [];
-      const quotes = resQuotes.data || [];
-      const orders = resOrders.data || [];
-      const lowStock = resStock.data || [];
-      const subs = resSub.data || [];
+      const advances = resAdv.status === 'fulfilled' ? (resAdv.value.data || []) : [];
+      const quotes = resQuotes.status === 'fulfilled' ? (resQuotes.value.data || []) : [];
+      const orders = resOrders.status === 'fulfilled' ? (resOrders.value.data || []) : [];
+      const lowStock = resStock.status === 'fulfilled' ? (resStock.value.data || []) : [];
+      const subs = resSub.status === 'fulfilled' ? (resSub.value.data || []) : [];
 
       setLowStockAlerts(lowStock);
       setSubcontracts(subs);
-      setDashboardStats(resStats.data);
+      setDashboardStats(resStats.status === 'fulfilled' ? resStats.value.data : null);
 
       // Pending action items specifically for CNC Shop
       const tasks = [];

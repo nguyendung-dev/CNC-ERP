@@ -34,13 +34,14 @@ export default function SalesModule() {
   const canManageQuotations = user?.role === 'admin' || user?.role === 'sales';
   const canManageDeliveries = user?.role === 'admin' || user?.role === 'sales' || user?.role === 'warehouse';
 
+  const [activeSubTab, setActiveSubTab] = useState('quotations'); // 'quotations' | 'orders' | 'deliveries'
+
   // If accountant or warehouse, hide quotations tab
   useEffect(() => {
     if (!canManageQuotations && activeSubTab === 'quotations') {
       setActiveSubTab('orders');
     }
   }, [user?.role, canManageQuotations, activeSubTab]);
-  const [activeSubTab, setActiveSubTab] = useState('quotations'); // 'quotations' | 'orders' | 'deliveries'
   const [quotations, setQuotations] = useState([]);
   const [orders, setOrders] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
