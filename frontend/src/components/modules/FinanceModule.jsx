@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Plus, 
   CreditCard, 
@@ -18,7 +18,7 @@ import CurrencyInput from '../ui/CurrencyInput';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
-import { Input, Select } from '../ui/Input';
+import { Input, Select, Dropdown } from '../ui/Input';
 import { useToast } from '../../context/ToastContext';
 
 export default function FinanceModule({ initialSubTab }) {
@@ -33,6 +33,9 @@ export default function FinanceModule({ initialSubTab }) {
   const [advances, setAdvances] = useState([]);
   const [payments, setPayments] = useState([]);
   const [debts, setDebts] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [salesOrders, setSalesOrders] = useState([]);
+  const [subcontracts, setSubcontracts] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Modals
@@ -97,17 +100,23 @@ export default function FinanceModule({ initialSubTab }) {
     due_date: '',
   });
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      const [resAdv, resPay, resDebts] = await Promise.all([
+      const [resAdv, resPay, resDebts, resCust, resSo, resSub] = await Promise.allSettled([
         api.get('/finance/advances'),
         api.get('/finance/payments'),
         api.get('/finance/debts'),
+        api.get('/customers'),
+        api.get('/sales/orders'),
+        api.get('/production/subcontracting'),
       ]);
-      setAdvances(resAdv.data || []);
-      setPayments(resPay.data || []);
-      setDebts(resDebts.data || []);
+      setAdvances(resAdv.status === 'fulfilled' ? (resAdv.value.data || []) : []);
+      setPayments(resPay.status === 'fulfilled' ? (resPay.value.data || []) : []);
+      setDebts(resDebts.status === 'fulfilled' ? (resDebts.value.data || []) : []);
+      setCustomers(resCust.status === 'fulfilled' ? (resCust.value.data || []) : []);
+      setSalesOrders(resSo.status === 'fulfilled' ? (resSo.value.data || []) : []);
+      setSubcontracts(resSub.status === 'fulfilled' ? (resSub.value.data || []) : []);
     } catch (err) {
       console.error('Failed to load finance data:', err);
     } finally {
@@ -117,6 +126,30 @@ export default function FinanceModule({ initialSubTab }) {
 
   useEffect(() => {
     loadData();
+
+    const handleUpdate = () => loadData(true);
+    const handleFocus = () => loadData(true);
+
+    window.addEventListener('cnc_data_updated', handleUpdate);
+    window.addEventListener('focus', handleFocus);
+
+    const handleDebtNavigation = (e) => {
+      const detail = e.detail;
+      setSubTab('debts');
+      if (detail && detail.partner_name) {
+        showSuccess(
+          'Sổ Công Nợ',
+          `Đã chuyển đến Sổ công nợ theo phiếu xuất "${detail.delivery_code || ''}" của đối tác "${detail.partner_name}".`
+        );
+      }
+    };
+    window.addEventListener('highlight_or_open_debt', handleDebtNavigation);
+
+    return () => {
+      window.removeEventListener('cnc_data_updated', handleUpdate);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('highlight_or_open_debt', handleDebtNavigation);
+    };
   }, []);
 
   const handleCreateAdvance = async (e) => {
@@ -186,15 +219,30 @@ export default function FinanceModule({ initialSubTab }) {
     }
   };
 
-  const handlePayDebt = async (debtId) => {
-    const amountStr = prompt('Nhập số tiền thanh toán (VNĐ):');
-    if (!amountStr) return;
+  const openPayModal = (debt) => {
+    setPayingDebt(debt);
+    setPayAmount(Number(debt.remaining_amount) || 0);
+    setIsPayModalOpen(true);
+  };
+
+  const handleConfirmPayDebt = async () => {
+    if (!payingDebt) return;
+    if (Number(payAmount) <= 0) {
+      showError('Số tiền không hợp lệ', 'Vui lòng nhập số tiền thanh toán lớn hơn 0.');
+      return;
+    }
     try {
-      await api.post(`/finance/debts/${debtId}/pay`, { amount: Number(amountStr) });
-      loadData();
-      showSuccess('Thanh toán thành công!', 'Số tiền công nợ đã được khấu trừ cập nhật.');
+      await api.post(`/finance/debts/${payingDebt.id}/pay`, { amount: Number(payAmount) });
+      setIsPayModalOpen(false);
+      setPayingDebt(null);
+      loadData(true);
+      showSuccess(
+        'Ghi nhận thành công!',
+        `Đã cập nhật ${Number(payAmount).toLocaleString()} đ cho công nợ đối tác "${payingDebt.partner_name}".`
+      );
+      window.dispatchEvent(new CustomEvent('cnc_data_updated', { detail: { action: 'debt_paid' } }));
     } catch (err) {
-      showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
+      showError('Lỗi thanh toán công nợ', err.response?.data?.message || err.message);
     }
   };
 
@@ -344,6 +392,83 @@ export default function FinanceModule({ initialSubTab }) {
     Number(paymentForm.gross_amount || 0) - Number(paymentForm.deduct_advance_amount || 0)
   );
 
+  
+  const partnerGroups = useMemo(() => {
+    const groups = [];
+
+    // 1. Chỉ lấy những Đơn hàng SO đã thực tế xuất hàng đi
+    const deliveredOrders = (salesOrders || []).filter(
+      (so) => Number(so.delivered_qty) > 0 || so.status === 'completed' || so.status === 'partially_delivered'
+    );
+
+    if (deliveredOrders.length > 0) {
+      groups.push({
+        label: 'Đơn hàng SO đã xuất hàng (Tự động điền khách hàng & số tiền)',
+        options: deliveredOrders.map((so) => {
+          const totalVal = Number(so.total_price || so.total_amount || 0);
+          return {
+            value: `SO:${so.id}:${so.customer_name}`,
+            label: `${so.code} - ${so.customer_name} (${totalVal.toLocaleString()} đ) - Đã xuất: ${so.delivered_qty || so.order_qty}/${so.order_qty} cái`,
+            badge: 'Đã xuất hàng',
+            customerName: so.customer_name,
+            amount: totalVal,
+            type: 'receivable',
+          };
+        }),
+      });
+    }
+
+    // 2. Chỉ lấy những Khách hàng đã có đơn xuất hàng đi
+    const deliveredCustomerNames = new Set(
+      deliveredOrders.map((so) => so.customer_name?.trim()).filter(Boolean)
+    );
+
+    const activeDeliveredCustomers = (customers || []).filter((c) =>
+      deliveredCustomerNames.has(c.name?.trim())
+    );
+
+    if (activeDeliveredCustomers.length > 0) {
+      groups.push({
+        label: 'Khách hàng đã xuất hàng (Công nợ Phải thu)',
+        options: activeDeliveredCustomers.map((c) => ({
+          value: c.name,
+          label: `${c.name} (${c.code || 'KH'}) - Đã xuất giao hàng`,
+          badge: 'Khách hàng đã giao',
+          customerName: c.name,
+          type: 'receivable',
+        })),
+      });
+    }
+
+    // 3. Nhà cung cấp & Đối tác gia công ngoài (chỉ những đối tác đã hoàn thành bàn giao hàng)
+    const completedSubcontracts = (subcontracts || []).filter(
+      (s) => s.status === 'received' || Number(s.received_qty) > 0
+    );
+    const completedVendors = [
+      ...new Set(completedSubcontracts.map((s) => s.vendor_name?.trim()).filter(Boolean)),
+    ];
+
+    if (completedVendors.length > 0) {
+      groups.push({
+        label: 'Nhà cung cấp / Đối tác đã bàn giao hàng (Công nợ Phải trả)',
+        options: completedVendors.map((v) => {
+          const subItem = completedSubcontracts.find((s) => s.vendor_name?.trim() === v);
+          const subCost = subItem ? Number(subItem.send_qty) * Number(subItem.unit_cost || 0) : 0;
+          return {
+            value: v,
+            label: `${v} (${subCost > 0 ? `${subCost.toLocaleString()} đ` : 'Đã nhận hàng'})`,
+            badge: 'Đã nhận hàng',
+            customerName: v,
+            amount: subCost > 0 ? subCost : undefined,
+            type: 'payable',
+          };
+        }),
+      });
+    }
+
+    return groups;
+  }, [customers, salesOrders, subcontracts]);
+
   return (
     <div className="space-y-6">
       {/* Sub Tabs */}
@@ -438,6 +563,19 @@ export default function FinanceModule({ initialSubTab }) {
                   {row.status === 'pending' && (
                     <Button size="sm" variant="success" onClick={() => handleApproveAdvance(row.id)}>
                       Duyệt chi
+                    </Button>
+                  )}
+                  {row.status === 'approved' && (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('navigate_to_inventory_receipt', { detail: { advance: row } }));
+                      }}
+                      className="text-xs py-1 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs"
+                      title="Lập phiếu nhập kho từ phiếu tạm ứng này"
+                    >
+                      Lập phiếu nhập kho
                     </Button>
                   )}
                   <button
@@ -577,7 +715,7 @@ export default function FinanceModule({ initialSubTab }) {
                 <div className="flex items-center gap-1.5">
                   {Number(row.remaining_amount) > 0 && (
                     <Button size="sm" variant="secondary" onClick={() => openPayModal(row)}>
-                      Ghi nhận trả
+                      {row.type === 'receivable' ? 'Thu tiền' : 'Ghi nhận trả'}
                     </Button>
                   )}
                   <button
@@ -735,13 +873,59 @@ export default function FinanceModule({ initialSubTab }) {
           }
         >
           <form className="space-y-4">
-            <Input
-              label="Tên Đối tác / Khách hàng / Nhà cung cấp"
-              placeholder="VD: Cty TNHH Sakura Precision..."
-              value={debtForm.partner_name}
-              onChange={(e) => setDebtForm({ ...debtForm, partner_name: e.target.value })}
-              required
-            />
+            <div>
+              <Dropdown
+                label="Đối tác / Khách hàng / Nhà cung cấp (*)"
+                placeholder="-- Bấm chọn Khách hàng hoặc Đơn hàng SO --"
+                value={
+                  debtForm.partner_name
+                    ? (salesOrders.some(so => so.customer_name === debtForm.partner_name) 
+                        ? (partnerGroups.flatMap(g => g.options).find(o => o.customerName === debtForm.partner_name)?.value || debtForm.partner_name)
+                        : (customers.some(c => c.name === debtForm.partner_name)
+                            ? debtForm.partner_name
+                            : (partnerGroups.flatMap(g => g.options).some(o => o.value === debtForm.partner_name) ? debtForm.partner_name : '__custom__')))
+                    : ''
+                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '__custom__') {
+                    setDebtForm(prev => ({ ...prev, partner_name: '' }));
+                    return;
+                  }
+                  const allOptions = partnerGroups.flatMap(g => g.options);
+                  const selectedOpt = allOptions.find(o => o.value === val);
+                  if (selectedOpt) {
+                    setDebtForm(prev => ({
+                      ...prev,
+                      partner_name: selectedOpt.customerName,
+                      type: selectedOpt.type || prev.type,
+                      total_amount: selectedOpt.amount !== undefined ? selectedOpt.amount : prev.total_amount,
+                    }));
+                  } else {
+                    setDebtForm(prev => ({ ...prev, partner_name: val }));
+                  }
+                }}
+                groups={partnerGroups}
+                searchable={true}
+                customActions={[
+                  {
+                    label: 'Nhập đối tác khác...',
+                    value: '__custom__',
+                    onClick: () => setDebtForm(prev => ({ ...prev, partner_name: '' })),
+                  },
+                ]}
+              />
+              {(!partnerGroups.flatMap(g => g.options).some(o => o.customerName === debtForm.partner_name || o.value === debtForm.partner_name) || debtForm.partner_name === '') && (
+                <input
+                  type="text"
+                  placeholder="Gõ tên đối tác mới tại đây nếu chưa có trong danh sách..."
+                  value={debtForm.partner_name}
+                  onChange={(e) => setDebtForm({ ...debtForm, partner_name: e.target.value })}
+                  className="w-full mt-1.5 px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50/50"
+                  required
+                />
+              )}
+            </div>
 
             <Select
               label="Phân loại công nợ"

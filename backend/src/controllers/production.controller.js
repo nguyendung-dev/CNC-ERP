@@ -47,6 +47,19 @@ class ProductionController {
     }
   }
 
+  async issueMaterial(req, res, next) {
+    try {
+      const data = await productionService.issueMaterial(req.params.id);
+      res.json({
+        success: true,
+        message: 'Đã xuất kho phôi và cấp vật tư cho xưởng thành công!',
+        data,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async handoverFinishedGoods(req, res, next) {
     try {
       const { qty } = req.body;
@@ -206,6 +219,16 @@ class ProductionController {
     try {
       await productionService.deleteOperator(req.params.id);
       res.json({ success: true, message: 'Đã xóa thợ máy khỏi hệ thống' });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async assignOperatorsToWorkshop(req, res, next) {
+    try {
+      const { workshop_id, operator_ids } = req.body;
+      const data = await productionService.assignOperatorsToWorkshop(workshop_id, operator_ids);
+      res.json({ success: true, message: 'Phân công công nhân vào phân xưởng thành công', data });
     } catch (err) {
       next(err);
     }

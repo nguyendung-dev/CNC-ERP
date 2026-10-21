@@ -25,7 +25,7 @@ import Badge, { STATUS_LABELS } from '../ui/Badge';
 import Button from '../ui/Button';
 import ExportButton from '../ui/ExportButton';
 import Modal from '../ui/Modal';
-import { Input, Select } from '../ui/Input';
+import { Input, Select, Dropdown } from '../ui/Input';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import * as XLSX from 'xlsx';
@@ -142,8 +142,8 @@ export default function SalesModule({ initialSubTab }) {
     status: 'pending_warehouse',
   });
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [resQuotes, resOrders, resDeliveries, resCustomers, resParts] = await Promise.allSettled([
         api.get('/sales/quotations'),
@@ -160,13 +160,81 @@ export default function SalesModule({ initialSubTab }) {
     } catch (err) {
       console.error('Failed to load sales data:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
+
+    const handleUpdate = () => loadData(true);
+    const handleFocus = () => loadData(true);
+
+    window.addEventListener('cnc_data_updated', handleUpdate);
+    window.addEventListener('focus', handleFocus);
+
+    // Heartbeat live polling every 6s
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadData(true);
+      }
+    }, 6000);
+
+    return () => {
+      window.removeEventListener('cnc_data_updated', handleUpdate);
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
   }, []);
+
+  // Event listener: open delivery modal when triggered from Finished Goods Stock
+  useEffect(() => {
+    const handleOpenDelivery = (e) => {
+      const detail = e.detail;
+      if (!detail) return;
+      setActiveSubTab('deliveries');
+
+      // Find matching SO by so_id or drawing_code or code
+      let matchedOrder = null;
+      if (detail.so_id) {
+        matchedOrder = orders.find(
+          (o) => String(o.id) === String(detail.so_id) || o.code === detail.so_id
+        );
+      }
+      if (!matchedOrder && detail.drawing_code) {
+        matchedOrder = orders.find((o) => o.drawing_code === detail.drawing_code);
+      }
+      if (!matchedOrder && orders.length > 0) {
+        matchedOrder = orders[0];
+      }
+
+      if (matchedOrder) {
+        setSelectedOrderForDelivery(matchedOrder);
+        setDeliveryForm({
+          so_id: matchedOrder.id,
+          customer_name: matchedOrder.customer_name || 'Khách hàng',
+          drawing_code: matchedOrder.drawing_code || detail.drawing_code || '',
+          delivery_qty: Number(detail.delivery_qty) || Number(matchedOrder.order_qty) || 1,
+          receiver_name: matchedOrder.customer_name || '',
+          note: `Xuất kho thành phẩm chi tiết "${detail.part_name || matchedOrder.part_name}" từ lệnh ${detail.code || ''}`,
+        });
+      } else {
+        setSelectedOrderForDelivery(null);
+        setDeliveryForm({
+          so_id: '',
+          customer_name: 'Khách hàng nhận chi tiết',
+          drawing_code: detail.drawing_code || '',
+          delivery_qty: Number(detail.delivery_qty) || 1,
+          receiver_name: '',
+          note: `Xuất kho thành phẩm chi tiết "${detail.part_name || ''}" từ lệnh ${detail.code || ''}`,
+        });
+      }
+      setIsDeliveryModalOpen(true);
+    };
+
+    window.addEventListener('open_sales_delivery_modal', handleOpenDelivery);
+    return () => window.removeEventListener('open_sales_delivery_modal', handleOpenDelivery);
+  }, [orders]);
 
   // Calculate live quotation total
   const estimatedTotal =
@@ -201,6 +269,7 @@ export default function SalesModule({ initialSubTab }) {
       setDrawingFile(null);
       loadData();
       showSuccess('Tạo báo giá thành công!', 'Báo giá cho chi tiết "' + partName + '" của khách hàng ' + customerName + ' đã được tạo.');
+      window.dispatchEvent(new CustomEvent('cnc_data_updated', { detail: { action: 'quotation_created' } }));
     } catch (err) {
       showError('Lỗi lập báo giá', err.response?.data?.message || err.message);
     }
@@ -501,6 +570,18 @@ export default function SalesModule({ initialSubTab }) {
         }
       },
     });
+  };
+
+  const handleLinkToDebt = (deliveryRow) => {
+    window.dispatchEvent(
+      new CustomEvent('navigate_to_finance_debt', {
+        detail: {
+          partner_name: deliveryRow.customer_name,
+          so_id: deliveryRow.so_id,
+          delivery_code: deliveryRow.code,
+        },
+      })
+    );
   };
 
   const handleCreateDelivery = async (e) => {
@@ -1000,6 +1081,18 @@ export default function SalesModule({ initialSubTab }) {
                       Kiểm hàng & Xuất kho
                     </Button>
                   )}
+                  {row.status === 'exported' && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      icon={DollarSign}
+                      onClick={() => handleLinkToDebt(row)}
+                      className="text-xs py-1 px-2.5 border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 font-semibold"
+                      title="Chuyển sang Sổ Công Nợ để xem hoặc lập công nợ cho khách hàng này"
+                    >
+                      Sổ công nợ
+                    </Button>
+                  )}
 
                   {canManageDeliveries && (
                     <button
@@ -1055,7 +1148,8 @@ export default function SalesModule({ initialSubTab }) {
                   </span>
                 )}
               </div>
-              <select
+              <Dropdown
+                placeholder="-- Chọn khách hàng đã tạo --"
                 value={customerList.some((c) => c.name === quotationForm.customer_name) ? quotationForm.customer_name : (quotationForm.customer_name ? '__custom__' : '')}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -1070,17 +1164,21 @@ export default function SalesModule({ initialSubTab }) {
                     }));
                   }
                 }}
-                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-                required
-              >
-                <option value="">-- Chọn khách hàng đã tạo --</option>
-                {customerList.map((c) => (
-                  <option key={c.id} value={c.name}>
-                    {c.code} - {c.name} {c.phone ? `(${c.phone})` : ''}
-                  </option>
-                ))}
-                <option value="__custom__">✏️ Hoặc nhập khách hàng mới khác...</option>
-              </select>
+                options={customerList.map((c) => ({
+                  value: c.name,
+                  label: `${c.code} - ${c.name}`,
+                  description: c.phone ? `SĐT: ${c.phone}` : undefined,
+                  badge: c.code,
+                }))}
+                searchable={true}
+                customActions={[
+                  {
+                    label: '✏️ Hoặc nhập khách hàng mới khác...',
+                    value: '__custom__',
+                    onClick: () => setQuotationForm(prev => ({ ...prev, customer_name: '' })),
+                  },
+                ]}
+              />
 
               {(!customerList.some((c) => c.name === quotationForm.customer_name) || quotationForm.customer_name === '') && (
                 <input
@@ -1113,7 +1211,8 @@ export default function SalesModule({ initialSubTab }) {
                   </span>
                 )}
               </div>
-              <select
+              <Dropdown
+                placeholder="-- Chọn từ Danh mục chi tiết CNC (Tự điền bản vẽ) --"
                 value={partsList.some((p) => p.name === quotationForm.part_name) ? quotationForm.part_name : (quotationForm.part_name ? '__custom__' : '')}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -1129,16 +1228,21 @@ export default function SalesModule({ initialSubTab }) {
                     }));
                   }
                 }}
-                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-              >
-                <option value="">-- Chọn từ Danh mục chi tiết CNC (Tự điền bản vẽ) --</option>
-                {partsList.map((p) => (
-                  <option key={p.id} value={p.name}>
-                    {p.code} - {p.name} {p.drawing_code ? `(Bản vẽ: ${p.drawing_code})` : ''}
-                  </option>
-                ))}
-                <option value="__custom__">✏️ Nhập chi tiết tùy chỉnh ngoài danh mục...</option>
-              </select>
+                options={partsList.map((p) => ({
+                  value: p.name,
+                  label: `${p.code} - ${p.name}`,
+                  description: p.drawing_code ? `Bản vẽ: ${p.drawing_code}` : undefined,
+                  badge: p.code,
+                }))}
+                searchable={true}
+                customActions={[
+                  {
+                    label: '✏️ Nhập chi tiết tùy chỉnh ngoài danh mục...',
+                    value: '__custom__',
+                    onClick: () => setQuotationForm(prev => ({ ...prev, part_name: '' })),
+                  },
+                ]}
+              />
 
               {(!partsList.some((p) => p.name === quotationForm.part_name) || quotationForm.part_name === '') && (
                 <input

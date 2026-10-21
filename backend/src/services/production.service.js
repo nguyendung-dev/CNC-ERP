@@ -1,3 +1,4 @@
+const inventoryRepo = require('../repositories/inventory.repository');
 const productionRepo = require('../repositories/production.repository');
 
 class ProductionService {
@@ -31,7 +32,36 @@ class ProductionService {
         'Đóng gói',
       ];
     }
+    // Check and deduct material stock if requested
+    if (data.material_id && Number(data.material_qty_needed) > 0) {
+      const mat = await inventoryRepo.getById(data.material_id);
+      if (mat) {
+        data.material_name = mat.name;
+        if (data.auto_issue_material) {
+          data.material_status = 'issued';
+          await inventoryRepo.updateStock(data.material_id, -Number(data.material_qty_needed));
+        } else {
+          data.material_status = 'pending';
+        }
+      }
+    }
     return await productionRepo.createProductionOrder(data);
+  }
+
+  async issueMaterial(orderId) {
+    const order = await productionRepo.getProductionOrderById(orderId);
+    if (!order) {
+      const error = new Error('Không tìm thấy Lệnh sản xuất');
+      error.status = 404;
+      throw error;
+    }
+    if (order.material_status === 'issued') {
+      return order;
+    }
+    if (order.material_id && Number(order.material_qty_needed) > 0) {
+      await inventoryRepo.updateStock(order.material_id, -Number(order.material_qty_needed));
+    }
+    return await productionRepo.updateProductionOrder(orderId, { material_status: 'issued' });
   }
 
   async updateProductionOrder(id, data) {
@@ -58,15 +88,24 @@ class ProductionService {
     if (data.production_order_id) {
       const order = await productionRepo.getProductionOrderById(data.production_order_id);
       if (order) {
-        const newCompleted = Math.max(Number(order.completed_qty), Number(data.qty_passed) || 0);
-        const newNg = Number(order.ng_qty) + (Number(data.qty_failed) || 0);
+        // Accumulate completed quantity recorded by worker
+        const newCompleted = Number(order.completed_qty || 0) + (Number(data.qty_passed) || 0);
+        const newNg = Number(order.ng_qty || 0) + (Number(data.qty_failed) || 0);
         const isDone = newCompleted >= Number(order.target_qty);
 
+        // Check if should pause production order due to critical NG defect
+        const shouldPause = (data.action_on_error === 'stop') || (Number(data.qty_failed) > 0 && Number(data.qty_passed) === 0);
+
+        let newStatus = isDone ? 'completed' : (order.status === 'paused' ? 'paused' : 'running');
+        if (shouldPause) {
+          newStatus = 'paused';
+        }
+
         await productionRepo.updateProductionStep(data.production_order_id, {
-          current_step: data.to_step,
+          current_step: shouldPause ? `Tạm dừng: ${data.from_step} (Sự cố NG)` : (isDone ? 'Hoàn thành & Bàn giao kho' : (data.to_step || order.current_step)),
           completed_qty: newCompleted,
           ng_qty: newNg,
-          status: isDone ? 'finished' : 'running',
+          status: newStatus,
         });
 
         // Link with Sales Order (SO): Sync finished machined_qty
@@ -94,6 +133,28 @@ class ProductionService {
       status: isDone ? 'finished' : 'running',
       current_step: isDone ? 'Đã QC nghiệm thu & Nhập kho thành phẩm' : order.current_step,
     });
+
+    // Auto create Finished Goods Receipt voucher in Inventory
+    try {
+      const inventoryRepo = require('../repositories/inventory.repository');
+      const voucherCode = `NK-TP-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`;
+      await inventoryRepo.createVoucher({
+        code: voucherCode,
+        type: 'in',
+        material_name: (order.part_name || '').trim(),
+        material_code: order.drawing_code || 'TP-CNC',
+        quantity: addedQty,
+        unit: 'Chi tiết',
+        unit_price: 0,
+        total_amount: 0,
+        partner_name: `Xưởng sản xuất CNC (${order.workshop_name || 'Xưởng A'})`,
+        lsx_code: order.code,
+        created_by: 'Kỹ sư KCS & Thủ kho',
+        note: `Nghiệm thu QC đạt chuẩn 100% & Bàn giao nhập kho thành phẩm từ lệnh sản xuất ${order.code} (Bản vẽ: ${order.drawing_code || '---'})`,
+      });
+    } catch (vErr) {
+      console.error('[Production] Failed to auto create finished goods receipt voucher:', vErr.message);
+    }
 
     if (order.so_id) {
       const salesRepo = require('../repositories/sales.repository');
@@ -170,6 +231,10 @@ class ProductionService {
 
   async deleteOperator(id) {
     return await productionRepo.deleteOperator(id);
+  }
+
+  async assignOperatorsToWorkshop(workshopId, operatorIds) {
+    return await productionRepo.assignOperatorsToWorkshop(workshopId, operatorIds);
   }
 }
 

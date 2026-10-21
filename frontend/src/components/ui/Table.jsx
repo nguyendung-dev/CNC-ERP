@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Loader2, Inbox } from 'lucide-react';
 import Pagination from './Pagination';
 
@@ -23,12 +23,12 @@ export default function Table({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
 
-  // Reset to page 1 if data length shrinks
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [safeData.length]);
+  // Derived safe page: ensures current page never exceeds max pages without triggering extra re-renders
+  const totalPages = Math.max(1, Math.ceil(safeData.length / pageSize) || 1);
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
 
-  if (isLoading) {
+  // Only show full loader if there is no data yet
+  if (isLoading && (!safeData || safeData.length === 0)) {
     return (
       <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-3">
         <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
@@ -47,7 +47,7 @@ export default function Table({
   }
 
   const paginatedData = enablePagination
-    ? safeData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    ? safeData.slice((safePage - 1) * pageSize, safePage * pageSize)
     : safeData;
 
   return (
@@ -78,7 +78,7 @@ export default function Table({
                     key={colIdx}
                     className={`py-3.5 px-4 text-slate-700 ${col.wrap ? '' : 'whitespace-nowrap'} ${col.cellClassName || ''}`}
                   >
-                    {col.render ? col.render(row, (currentPage - 1) * pageSize + rowIdx) : row?.[col.accessor]}
+                    {col.render ? col.render(row, (safePage - 1) * pageSize + rowIdx) : row?.[col.accessor]}
                   </td>
                 ))}
               </tr>
@@ -89,7 +89,7 @@ export default function Table({
 
       {enablePagination && safeData.length > 0 && (
         <Pagination
-          currentPage={currentPage}
+          currentPage={safePage}
           totalItems={safeData.length}
           pageSize={pageSize}
           onPageChange={setCurrentPage}

@@ -35,7 +35,8 @@ import {
   Pencil,
   Trash2,
   Eye,
-  EyeOff
+  EyeOff,
+  HardHat
 } from 'lucide-react';
 import api from '../api';
 import { t } from '../i18n';
@@ -109,8 +110,8 @@ export default function DashboardPage() {
   const [regSubmitting, setRegSubmitting] = useState(false);
   const [regMessage, setRegMessage] = useState({ type: '', text: '' });
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [resAdv, resQuotes, resOrders, resStock, resSub, resStats, resDeliveries, resPayments] = await Promise.allSettled([
         api.get('/finance/advances'),
@@ -228,48 +229,113 @@ export default function DashboardPage() {
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
+  // Re-fetch whenever activeNav switches back to home or user changes
   useEffect(() => {
     if (user && token) {
       loadData();
     }
-  }, [user, token]);
+  }, [user, token, activeNav]);
+
+  // Realtime Live Event Listener & Auto Heartbeat Sync
+  useEffect(() => {
+    const handleUpdate = () => {
+      loadData(true);
+    };
+    const handleFocus = () => {
+      loadData(true);
+    };
+
+    const handleNavReceipt = (e) => {
+      setActiveNav('inventory');
+      setActiveSubNav('receipts');
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('open_inventory_receipt_modal', { detail: e.detail }));
+      }, 150);
+    };
+    const handleNavDelivery = (e) => {
+      setActiveNav('sales');
+      setActiveSubNav('deliveries');
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('open_sales_delivery_modal', { detail: e.detail }));
+      }, 150);
+    };
+    const handleNavDebt = (e) => {
+      setActiveNav('finance');
+      setActiveSubNav('debts');
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('highlight_or_open_debt', { detail: e.detail }));
+      }, 150);
+    };
+    window.addEventListener('navigate_to_inventory_receipt', handleNavReceipt);
+    window.addEventListener('navigate_to_sales_delivery', handleNavDelivery);
+    window.addEventListener('navigate_to_finance_debt', handleNavDebt);
+    window.addEventListener('cnc_data_updated', handleUpdate);
+    window.addEventListener('focus', handleFocus);
+
+    // Heartbeat live polling every 5s for real-time multi-user synchronization
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadData(true);
+      }
+    }, 5000);
+
+    return () => {
+      window.removeEventListener('navigate_to_inventory_receipt', handleNavReceipt);
+      window.removeEventListener('navigate_to_sales_delivery', handleNavDelivery);
+      window.removeEventListener('navigate_to_finance_debt', handleNavDebt);
+      window.removeEventListener('cnc_data_updated', handleUpdate);
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleApprove = async (task) => {
+    // Optimistically remove from pending tasks for 0ms instantaneous UI feedback
+    setPendingTasks((prev) => prev.filter((t) => t.id !== task.id));
+
     if (task.actionType === 'advance') {
       try {
         await api.patch(`/finance/advances/${task.id}/approve`);
         showSuccess('Phê duyệt thành công', 'Phiếu đề nghị tạm ứng đã được phê duyệt hợp lệ.');
+        window.dispatchEvent(new CustomEvent('cnc_data_updated', { detail: { action: 'advance_approved' } }));
         loadData();
       } catch (err) {
         showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
+        loadData();
       }
     } else if (task.actionType === 'quotation') {
       try {
         await api.post(`/sales/quotations/${task.id}/convert-to-so`);
-        showSuccess('Duyệt báo giá thành công!', 'Đã tạo Đơn đặt hàng (SO) từ báo giá.');
+        showSuccess('Duyệt báo giá thành công!', 'Đã tạo Đơn đặt hàng (SO) từ báo giá và chuyển sang Bán hàng.');
+        window.dispatchEvent(new CustomEvent('cnc_data_updated', { detail: { action: 'quotation_approved' } }));
         loadData();
       } catch (err) {
         showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
+        loadData();
       }
     } else if (task.actionType === 'payment') {
       try {
         await api.patch(`/finance/payments/${task.id}/approve`);
         showSuccess('Duyệt chi thành công!', 'Phiếu thanh toán đã được phê duyệt chi tiền.');
+        window.dispatchEvent(new CustomEvent('cnc_data_updated', { detail: { action: 'payment_approved' } }));
         loadData();
       } catch (err) {
         showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
+        loadData();
       }
     } else if (task.actionType === 'delivery') {
       try {
         await api.post(`/sales/delivery-notes/${task.id}/confirm-export`);
         showSuccess('Xuất kho thành công!', 'Đã xác nhận kiểm hàng và xuất kho thành công.');
+        window.dispatchEvent(new CustomEvent('cnc_data_updated', { detail: { action: 'delivery_confirmed' } }));
         loadData();
       } catch (err) {
         showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
+        loadData();
       }
     } else if (task.actionType === 'subcontract') {
       try {
@@ -279,17 +345,19 @@ export default function DashboardPage() {
           qc_passed_qty: 50,
         });
         showSuccess('Nghiệm thu thành công!', 'Đã nhận hàng gia công ngoài về kho.');
+        window.dispatchEvent(new CustomEvent('cnc_data_updated', { detail: { action: 'subcontract_received' } }));
         loadData();
       } catch (err) {
         showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
+        loadData();
       }
     } else {
-      setPendingTasks(pendingTasks.filter((t) => t.id !== task.id));
       showSuccess('Xử lý thành công!', 'Đã hoàn thành công việc được giao.');
     }
   };
 
   const handleReject = async (task) => {
+    setPendingTasks((prev) => prev.filter((t) => t.id !== task.id));
     try {
       if (task.actionType === 'advance') {
         await api.patch(`/finance/advances/${task.id}/reject`);
@@ -299,9 +367,10 @@ export default function DashboardPage() {
         await api.patch(`/finance/payments/${task.id}/reject`);
       }
       showSuccess('Đã từ chối!', 'Yêu cầu đã được cập nhật trạng thái từ chối trong hệ thống.');
+      window.dispatchEvent(new CustomEvent('cnc_data_updated', { detail: { action: 'task_rejected' } }));
       loadData();
     } catch (err) {
-      setPendingTasks(pendingTasks.filter((t) => t.id !== task.id));
+      loadData();
       showSuccess('Từ chối công việc', 'Nhiệm vụ đã được cập nhật.');
     }
   };
@@ -447,10 +516,10 @@ export default function DashboardPage() {
 
   // Role-based Nav Permissions Map: Phân quyền (settings) chỉ Admin mới được thấy và truy cập!
   const ROLE_NAV_PERMISSIONS = {
-    admin: ['home', 'sales', 'customers', 'inventory', 'production', 'finance', 'reports', 'settings'],
+    admin: ['home', 'sales', 'customers', 'inventory', 'production', 'operators', 'finance', 'reports', 'settings'],
     sales: ['home', 'sales', 'customers', 'inventory'],
-    production: ['home', 'production', 'inventory'],
-    warehouse: ['home', 'inventory', 'production'],
+    production: ['home', 'production', 'operators', 'inventory'],
+    warehouse: ['home', 'inventory', 'production', 'operators'],
     accountant: ['home', 'finance', 'sales', 'customers', 'reports'],
   };
 
@@ -541,10 +610,17 @@ export default function DashboardPage() {
           label: t('nav.sub_production_workshops', 'Phân Xưởng CNC'),
           desc: t('nav.sub_production_workshops_desc', 'Thêm, sửa, xóa quy mô xưởng & dàn máy'),
         },
+      ],
+    },
+    {
+      id: 'operators',
+      label: 'Quản lý công nhân',
+      icon: HardHat,
+      subItems: [
         {
-          id: 'operators',
-          label: 'Quản Lý Thợ Máy CNC',
-          desc: 'Danh sách thợ đứng máy, bậc thợ & phân công xưởng',
+          id: 'list',
+          label: 'Danh Sách Công Nhân & Thợ Máy',
+          desc: 'Quản lý hồ sơ, bậc thợ, phân xưởng và tay nghề đứng máy',
         },
       ],
     },
@@ -604,6 +680,7 @@ export default function DashboardPage() {
     customers: 'Quản Lý Danh Mục Khách Hàng & Đối Tác',
     inventory: 'Quản lý Kho Phôi & Dao Cụ',
     production: 'Quản lý Sản Xuất & Điều Độ Máy',
+    operators: 'Quản Lý Công Nhân & Thợ Máy Sản Xuất',
     finance: 'Quản lý Tài Chính & Dòng Tiền',
     reports: 'Báo Cáo & Phân Tích Quản Trị',
     settings: 'Ma Trận Phân Quyền & Quy Trình Vận Hành 8 Bước CNC',
@@ -677,8 +754,9 @@ export default function DashboardPage() {
           {/* Module Views (Guarded by permission) */}
           {activeNav === 'sales' && <SalesModule initialSubTab={activeSubNav} />}
           {activeNav === 'customers' && <CustomersModule />}
-          {activeNav === 'inventory' && <InventoryModule />}
+          {activeNav === 'inventory' && <InventoryModule initialSubTab={activeSubNav} />}
           {activeNav === 'production' && <ProductionModule initialSubTab={activeSubNav} />}
+          {activeNav === 'operators' && <ProductionModule initialSubTab="operators" />}
           {activeNav === 'finance' && <FinanceModule initialSubTab={activeSubNav} />}
           {activeNav === 'reports' && <ReportsModule />}
 
@@ -973,7 +1051,7 @@ export default function DashboardPage() {
                         <div>
                           <p className="font-semibold text-slate-800">{item.name}</p>
                           <span className="text-[11px] text-slate-400">
-                            Tồn: <strong className="text-rose-600">{item.quantity} {item.unit}</strong> (Min: {item.min_stock})
+                            Tồn: <strong className="text-rose-600">{Number(item.quantity).toLocaleString('vi-VN')} {item.unit}</strong> (Min: {Number(item.min_stock).toLocaleString('vi-VN')})
                           </span>
                         </div>
                         <button

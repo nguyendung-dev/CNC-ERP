@@ -15,25 +15,27 @@ class ProductionRepository {
   async createProductionOrder(data) {
     const {
       code, so_id, part_name, drawing_code, target_qty, routing,
-      current_step, workshop_name, status, start_date, end_date
+      current_step, workshop_name, status, start_date, end_date,
+      material_id, material_name, material_qty_needed, material_status
     } = data;
 
     const routingStr = typeof routing === 'object' ? JSON.stringify(routing) : routing;
 
     const [result] = await pool.query(
-      `INSERT INTO production_orders (code, so_id, part_name, drawing_code, target_qty, completed_qty, ng_qty, routing, current_step, workshop_name, status, start_date, end_date)
-       VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO production_orders (code, so_id, part_name, drawing_code, target_qty, completed_qty, ng_qty, routing, current_step, workshop_name, status, start_date, end_date, material_id, material_name, material_qty_needed, material_status)
+       VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         code, so_id || null, part_name, drawing_code || '', target_qty,
         routingStr || '[]', current_step || 'Cắt phôi', workshop_name || 'Xưởng A (Phay Mazak, Tiện Doosan)', status || 'running',
-        start_date || null, end_date || null
+        start_date || null, end_date || null,
+        material_id || null, material_name || null, material_qty_needed || null, material_status || 'pending'
       ]
     );
     return this.getProductionOrderById(result.insertId);
   }
 
   async updateProductionOrder(id, data) {
-    const { target_qty, workshop_name, priority, notes, current_step, status } = data;
+    const { target_qty, workshop_name, priority, notes, current_step, status, material_status } = data;
     await pool.query(
       `UPDATE production_orders SET
         target_qty = COALESCE(?, target_qty),
@@ -41,9 +43,10 @@ class ProductionRepository {
         priority = COALESCE(?, priority),
         notes = COALESCE(?, notes),
         current_step = COALESCE(?, current_step),
-        status = COALESCE(?, status)
+        status = COALESCE(?, status),
+        material_status = COALESCE(?, material_status)
       WHERE id = ?`,
-      [target_qty, workshop_name, priority, notes, current_step, status, id]
+      [target_qty, workshop_name, priority, notes, current_step, status, material_status, id]
     );
     return this.getProductionOrderById(id);
   }
@@ -196,23 +199,24 @@ class ProductionRepository {
   }
 
   async createStep(data) {
-    const { step_order, name, assigned_role, description, workshop_id } = data;
+    const { step_order, name, assigned_role, description, workshop_id, assigned_operators } = data;
     const [result] = await pool.query(
-      'INSERT INTO production_steps (step_order, name, assigned_role, description, workshop_id) VALUES (?, ?, ?, ?, ?)',
-      [Number(step_order) || 1, name, assigned_role || '', description || '', workshop_id ? Number(workshop_id) : null]
+      'INSERT INTO production_steps (step_order, name, assigned_role, description, workshop_id, assigned_operators) VALUES (?, ?, ?, ?, ?, ?)',
+      [Number(step_order) || 1, name, assigned_role || '', description || '', workshop_id ? Number(workshop_id) : null, assigned_operators || '']
     );
     return this.getStepById(result.insertId);
   }
 
   async updateStep(id, data) {
-    const { step_order, name, assigned_role, description, workshop_id } = data;
+    const { step_order, name, assigned_role, description, workshop_id, assigned_operators } = data;
     await pool.query(
       `UPDATE production_steps SET
         step_order = COALESCE(?, step_order),
         name = COALESCE(?, name),
         assigned_role = COALESCE(?, assigned_role),
         description = COALESCE(?, description),
-        workshop_id = ?
+        workshop_id = ?,
+        assigned_operators = COALESCE(?, assigned_operators)
       WHERE id = ?`,
       [
         step_order !== undefined ? Number(step_order) : null,
@@ -220,6 +224,7 @@ class ProductionRepository {
         assigned_role,
         description,
         workshop_id !== undefined ? (workshop_id ? Number(workshop_id) : null) : null,
+        assigned_operators !== undefined ? assigned_operators : null,
         id
       ]
     );
@@ -291,6 +296,15 @@ class ProductionRepository {
   async deleteOperator(id) {
     await pool.query('DELETE FROM operators WHERE id = ?', [id]);
     return true;
+  }
+
+  async assignOperatorsToWorkshop(workshopId, operatorIds) {
+    if (!Array.isArray(operatorIds) || operatorIds.length === 0) return [];
+    await pool.query(
+      'UPDATE operators SET workshop_id = ? WHERE id IN (?)',
+      [workshopId ? Number(workshopId) : null, operatorIds]
+    );
+    return this.getAllOperators(workshopId);
   }
 }
 

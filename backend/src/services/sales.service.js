@@ -135,17 +135,50 @@ class SalesService {
       checked_by: checkedBy,
     });
 
-    // If direct export by Warehouse/Admin, update SO progress immediately
-    if (isDirectExport && order) {
-      const newDelivered = Number(order.delivered_qty || 0) + deliveryQty;
-      const isComplete = newDelivered >= Number(order.order_qty);
-      await salesRepo.updateOrderProgress(data.so_id, {
-        delivered_qty: newDelivered,
-        status: isComplete ? 'completed' : 'partially_delivered',
-      });
+    // If direct export by Warehouse/Admin, update SO progress immediately & auto create debt
+    if (isDirectExport) {
+      if (order) {
+        const newDelivered = Number(order.delivered_qty || 0) + deliveryQty;
+        const isComplete = newDelivered >= Number(order.order_qty);
+        await salesRepo.updateOrderProgress(data.so_id, {
+          delivered_qty: newDelivered,
+          status: isComplete ? 'completed' : 'partially_delivered',
+        });
+      }
+      await this.recordReceivableDebtForDelivery(deliveryNote, order);
     }
 
     return deliveryNote;
+  }
+
+  async recordReceivableDebtForDelivery(deliveryNote, order) {
+    try {
+      const financeRepo = require('../repositories/finance.repository');
+      const deliveryQty = Number(deliveryNote.delivery_qty) || 1;
+
+      let amount = 0;
+      if (order && Number(order.total_price) > 0 && Number(order.order_qty) > 0) {
+        const unitPrice = Number(order.total_price) / Number(order.order_qty);
+        amount = Math.round(unitPrice * deliveryQty);
+      } else {
+        amount = deliveryQty * 500000;
+      }
+
+      const partnerName = (deliveryNote.customer_name || order?.customer_name || 'Khách hàng').trim();
+      const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      await financeRepo.createDebt({
+        partner_name: partnerName,
+        type: 'receivable',
+        total_amount: amount,
+        paid_amount: 0,
+        due_date: dueDate,
+      });
+
+      console.log(`[Sales] Automatically created receivable debt of ${amount} for partner "${partnerName}" on delivery note ${deliveryNote.code}`);
+    } catch (err) {
+      console.error('[Sales] Failed to auto create receivable debt:', err.message);
+    }
   }
 
   async confirmDeliveryExport(id, user) {
@@ -163,8 +196,9 @@ class SalesService {
     }
 
     // Re-verify against SO
+    let order = null;
     if (note.so_id) {
-      const order = await salesRepo.getOrderById(note.so_id);
+      order = await salesRepo.getOrderById(note.so_id);
       if (order) {
         const machinedQty = Number(order.machined_qty || 0);
         const deliveredQty = Number(order.delivered_qty || 0);
@@ -188,7 +222,9 @@ class SalesService {
     }
 
     const checkedBy = user?.full_name || 'Thủ kho xác nhận';
-    return await salesRepo.updateDeliveryNoteStatus(id, 'exported', checkedBy);
+    const updatedNote = await salesRepo.updateDeliveryNoteStatus(id, 'exported', checkedBy);
+    await this.recordReceivableDebtForDelivery(updatedNote, order);
+    return updatedNote;
   }
 
   async updateQuotation(id, data) {

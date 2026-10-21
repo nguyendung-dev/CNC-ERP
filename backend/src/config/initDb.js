@@ -81,6 +81,29 @@ async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    // 1.1 Inventory Vouchers Table (Phiếu nhập kho & Phiếu xuất kho)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS inventory_vouchers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        code VARCHAR(50) UNIQUE NOT NULL,
+        type ENUM('in', 'out') NOT NULL,
+        material_id INT NULL,
+        material_name VARCHAR(255) NOT NULL,
+        material_code VARCHAR(100) NULL,
+        quantity DECIMAL(10,2) NOT NULL,
+        unit VARCHAR(50) NOT NULL,
+        unit_price DECIMAL(15,2) DEFAULT 0,
+        total_amount DECIMAL(15,2) DEFAULT 0,
+        partner_name VARCHAR(255) NULL,
+        advance_code VARCHAR(50) NULL,
+        lsx_code VARCHAR(50) NULL,
+        created_by VARCHAR(100) NULL,
+        note TEXT NULL,
+        status VARCHAR(50) DEFAULT 'completed',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
     // 2. Quotations Table (Báo giá chi tiết gia công CNC)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS quotations (
@@ -152,6 +175,10 @@ async function initializeDatabase() {
         current_step VARCHAR(100) DEFAULT 'Cắt phôi',
         workshop_name VARCHAR(150) NULL DEFAULT 'Xưởng A (Phay Mazak, Tiện Doosan)',
         status VARCHAR(50) DEFAULT 'running',
+        material_id INT NULL,
+        material_name VARCHAR(255) NULL,
+        material_qty_needed DECIMAL(10,2) NULL,
+        material_status VARCHAR(50) DEFAULT 'pending',
         start_date DATE,
         end_date DATE,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -285,6 +312,9 @@ async function initializeDatabase() {
     // Add workshop_id to production_steps if not present
     try {
       await pool.query('ALTER TABLE production_steps ADD COLUMN workshop_id INT DEFAULT NULL');
+      try {
+        await pool.query('ALTER TABLE production_steps ADD COLUMN assigned_operators TEXT DEFAULT NULL');
+      } catch (e) {}
       await pool.query('UPDATE production_steps SET workshop_id = 3 WHERE name LIKE "%Cắt phôi%" OR name LIKE "%Cưa%"');
       await pool.query('UPDATE production_steps SET workshop_id = 1 WHERE name LIKE "%Phay%" OR name LIKE "%Tiện%"');
       await pool.query('UPDATE production_steps SET workshop_id = 2 WHERE name LIKE "%Cắt dây%" OR name LIKE "%Mài%"');

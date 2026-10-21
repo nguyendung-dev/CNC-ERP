@@ -56,6 +56,40 @@ class InventoryController {
     }
   }
 
+
+  async getVouchers(req, res, next) {
+    try {
+      const { type, search } = req.query;
+      const data = await inventoryService.getVouchers({ type, search });
+      res.json({ success: true, count: data.length, data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async createVoucher(req, res, next) {
+    try {
+      const data = await inventoryService.createVoucher(req.body, req.user);
+      const actionName = data.type === 'out' ? 'Phiếu xuất kho' : 'Phiếu nhập kho';
+      res.status(201).json({
+        success: true,
+        message: `Đã lập ${actionName} ${data.code} thành công và cập nhật tồn kho!`,
+        data,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async deleteVoucher(req, res, next) {
+    try {
+      await inventoryService.deleteVoucher(req.params.id);
+      res.json({ success: true, message: 'Đã xóa phiếu kho và hoàn tác số lượng tồn!' });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async adjustStock(req, res, next) {
     try {
       const { changeAmount, reason } = req.body;

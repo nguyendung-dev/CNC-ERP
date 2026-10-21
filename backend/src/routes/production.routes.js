@@ -18,6 +18,7 @@ router.post(
 );
 router.patch('/orders/:id/step', authorizeRoles('production'), productionController.updateProductionStep);
 router.put('/orders/:id', authorizeRoles('production'), productionController.updateProductionOrder);
+router.post('/orders/:id/issue-material', authorizeRoles('production', 'warehouse'), productionController.issueMaterial);
 router.post('/orders/:id/handover-finished', authorizeRoles('production'), productionController.handoverFinishedGoods);
 router.delete('/orders/:id', authorizeRoles('production'), productionController.deleteProductionOrder);
 
@@ -52,6 +53,12 @@ router.delete('/steps/:id', authorizeRoles('production', 'admin'), productionCon
 
 // Operators (Quản lý Thợ Máy CNC)
 router.get('/operators', productionController.getOperators);
+router.post(
+  '/operators/assign-workshop',
+  authorizeRoles('production', 'admin'),
+  validateBody(['operator_ids']),
+  productionController.assignOperatorsToWorkshop
+);
 router.post('/operators', authorizeRoles('production', 'admin'), validateBody(['name']), productionController.createOperator);
 router.put('/operators/:id', authorizeRoles('production', 'admin'), productionController.updateOperator);
 router.delete('/operators/:id', authorizeRoles('production', 'admin'), productionController.deleteOperator);

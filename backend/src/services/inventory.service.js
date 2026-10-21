@@ -36,6 +36,26 @@ class InventoryService {
     return await inventoryRepo.delete(id);
   }
 
+
+  async getVouchers(filters) {
+    return await inventoryRepo.getAllVouchers(filters);
+  }
+
+  async createVoucher(data, user) {
+    const prefix = data.type === 'out' ? 'PXK' : 'PNK';
+    if (!data.code) {
+      data.code = `${prefix}-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`;
+    }
+    if (!data.created_by && user) {
+      data.created_by = user.full_name || user.username;
+    }
+    return await inventoryRepo.createVoucher(data);
+  }
+
+  async deleteVoucher(id) {
+    return await inventoryRepo.deleteVoucher(id);
+  }
+
   async adjustStock(id, changeAmount, reason) {
     await this.getMaterialById(id);
     return await inventoryRepo.updateStock(id, changeAmount);

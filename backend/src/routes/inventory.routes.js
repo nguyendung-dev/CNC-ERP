@@ -8,6 +8,9 @@ const router = express.Router();
 router.use(authMiddleware);
 
 // All logged in users can view materials & low-stock alerts
+router.get('/vouchers', inventoryController.getVouchers);
+router.post('/vouchers', authorizeRoles('warehouse', 'admin', 'production'), inventoryController.createVoucher);
+router.delete('/vouchers/:id', authorizeRoles('warehouse', 'admin'), inventoryController.deleteVoucher);
 router.get('/materials', inventoryController.getMaterials);
 router.get('/materials/alerts/low-stock', inventoryController.getLowStockAlerts);
 router.get('/materials/:id', inventoryController.getMaterialById);
