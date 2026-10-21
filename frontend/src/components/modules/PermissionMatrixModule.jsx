@@ -384,27 +384,21 @@ export default function PermissionMatrixModule({
 
   const handleCyclePermission = (moduleName, featureName, roleKey) => {
     if (!isAdmin) return;
-    setMatrixData((prev) => {
-      const next = JSON.parse(JSON.stringify(prev));
-      const targetSec = next.find((s) => s.module === moduleName);
-      if (targetSec) {
-        const targetItem = targetSec.items.find((i) => i.feature === featureName);
-        if (targetItem) {
-          const current = targetItem.roles[roleKey] || 'NONE';
-          const nextIdx = (PERM_CYCLE.indexOf(current) + 1) % PERM_CYCLE.length;
-          const nextLevel = PERM_CYCLE[nextIdx];
-          targetItem.roles[roleKey] = nextLevel;
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('cnc_erp_permission_matrix', JSON.stringify(next));
-          }
-          showSuccess(
-            'Đã cập nhật phân quyền!',
-            `${featureName} [${roleKey.toUpperCase()}]: Chuyển sang ${PERM_LABELS[nextLevel]}`
-          );
-        }
-      }
-      return next;
-    });
+    const next = JSON.parse(JSON.stringify(matrixData));
+    const targetSec = next.find((s) => s.module === moduleName);
+    if (!targetSec) return;
+    const targetItem = targetSec.items.find((i) => i.feature === featureName);
+    if (!targetItem) return;
+
+    const current = targetItem.roles[roleKey] || 'NONE';
+    const nextIdx = (PERM_CYCLE.indexOf(current) + 1) % PERM_CYCLE.length;
+    const nextLevel = PERM_CYCLE[nextIdx];
+    targetItem.roles[roleKey] = nextLevel;
+
+    setMatrixData(next);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cnc_erp_permission_matrix', JSON.stringify(next));
+    }
   };
 
   const handleResetDefault = () => {
