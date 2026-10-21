@@ -56,7 +56,22 @@ export default function SalesModule({ initialSubTab }) {
   const [orders, setOrders] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
   const [customerList, setCustomerList] = useState([]);
+  const [partsList, setPartsList] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Part Catalog state (Thêm, sửa, xóa chi tiết gia công CNC)
+  const [isAddPartOpen, setIsAddPartOpen] = useState(false);
+  const [isEditPartOpen, setIsEditPartOpen] = useState(false);
+  const [selectedPart, setSelectedPart] = useState(null);
+  const [partForm, setPartForm] = useState({
+    code: '',
+    name: '',
+    drawing_code: '',
+    material_category: 'Thép hợp kim S50C',
+    unit: 'Cái',
+    unit_price_estimate: 0,
+    note: '',
+  });
 
   // Modal states
   const [isQuotationModalOpen, setIsQuotationModalOpen] = useState(false);
@@ -129,16 +144,18 @@ export default function SalesModule({ initialSubTab }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [resQuotes, resOrders, resDeliveries, resCustomers] = await Promise.allSettled([
+      const [resQuotes, resOrders, resDeliveries, resCustomers, resParts] = await Promise.allSettled([
         api.get('/sales/quotations'),
         api.get('/sales/orders'),
         api.get('/sales/delivery-notes'),
         api.get('/customers'),
+        api.get('/sales/parts'),
       ]);
       setQuotations(resQuotes.status === 'fulfilled' ? (resQuotes.value.data || []) : []);
       setOrders(resOrders.status === 'fulfilled' ? (resOrders.value.data || []) : []);
       setDeliveries(resDeliveries.status === 'fulfilled' ? (resDeliveries.value.data || []) : []);
       setCustomerList(resCustomers.status === 'fulfilled' ? (resCustomers.value.data || []) : []);
+      setPartsList(resParts.status === 'fulfilled' ? (resParts.value.data?.data || resParts.value.data || []) : []);
     } catch (err) {
       console.error('Failed to load sales data:', err);
     } finally {
@@ -275,6 +292,83 @@ export default function SalesModule({ initialSubTab }) {
     } catch (err) {
       showError('Lỗi cập nhật phiếu giao hàng', err.response?.data?.message || err.message);
     }
+  };
+
+
+  // Part Catalog Handlers
+  const handleOpenAddPart = () => {
+    setSelectedPart(null);
+    const nextCode = 'CT-' + (partsList.length + 1).toString().padStart(2, '0');
+    setPartForm({
+      code: nextCode,
+      name: '',
+      drawing_code: '',
+      material_category: 'Thép hợp kim S50C',
+      unit: 'Cái',
+      unit_price_estimate: 0,
+      note: '',
+    });
+    setIsAddPartOpen(true);
+  };
+
+  const handleOpenEditPart = (p) => {
+    setSelectedPart(p);
+    setPartForm({
+      code: p.code || '',
+      name: p.name || '',
+      drawing_code: p.drawing_code || '',
+      material_category: p.material_category || 'Thép hợp kim S50C',
+      unit: p.unit || 'Cái',
+      unit_price_estimate: Number(p.unit_price_estimate) || 0,
+      note: p.note || '',
+    });
+    setIsEditPartOpen(true);
+  };
+
+  const handleCreatePart = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!partForm.name.trim()) {
+      showError('Thiếu thông tin', 'Vui lòng nhập tên chi tiết gia công CNC.');
+      return;
+    }
+    try {
+      await api.post('/sales/parts', partForm);
+      setIsAddPartOpen(false);
+      loadData();
+      showSuccess('Thêm chi tiết thành công!', `Chi tiết "${partForm.name}" đã được lưu vào Danh mục.`);
+    } catch (err) {
+      showError('Lỗi thêm chi tiết', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleUpdatePart = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!selectedPart) return;
+    try {
+      await api.put(`/sales/parts/${selectedPart.id}`, partForm);
+      setIsEditPartOpen(false);
+      loadData();
+      showSuccess('Cập nhật thành công!', `Chi tiết "${partForm.name}" đã được cập nhật.`);
+    } catch (err) {
+      showError('Lỗi cập nhật chi tiết', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleDeletePart = (p) => {
+    confirmDelete({
+      title: 'Xác Nhận Xóa Chi Tiết CNC',
+      itemName: p.name,
+      message: `Bạn có chắc chắn muốn xóa chi tiết "${p.name}" (${p.code}) khỏi Danh mục không?`,
+      onConfirm: async () => {
+        try {
+          await api.delete(`/sales/parts/${p.id}`);
+          loadData();
+          showSuccess('Đã xóa thành công!', `Chi tiết "${p.name}" đã được xóa khỏi danh mục.`);
+        } catch (err) {
+          showError('Lỗi xóa chi tiết', err.response?.data?.message || err.message);
+        }
+      },
+    });
   };
 
   const handleConvertToSO = (quotation) => {
@@ -561,6 +655,19 @@ export default function SalesModule({ initialSubTab }) {
               {deliveries.length}
             </span>
           </button>
+          <button
+            onClick={() => setActiveSubTab('parts')}
+            className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              activeSubTab === 'parts'
+                ? 'bg-white text-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+            }`}
+          >
+            <span>Danh Mục Chi Tiết CNC</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${activeSubTab === 'parts' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'}`}>
+              {partsList.length}
+            </span>
+          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -582,6 +689,16 @@ export default function SalesModule({ initialSubTab }) {
               size="md"
             >
               Lập phiếu XK mới
+            </Button>
+          )}
+          {activeSubTab === 'parts' && canManageQuotations && (
+            <Button
+              onClick={handleOpenAddPart}
+              icon={Plus}
+              variant="primary"
+              size="md"
+            >
+              Thêm chi tiết mới
             </Button>
           )}
           <ExportButton onClick={exportSalesExcel}>
@@ -666,6 +783,89 @@ export default function SalesModule({ initialSubTab }) {
           ]}
         />
       )}
+
+      {/* Parts Catalog SubTab */}
+      {activeSubTab === 'parts' && (
+        <div className="space-y-4">
+          <div className="bg-blue-50/60 border border-blue-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-600" />
+                <span>Danh Mục Sản Phẩm & Chi Tiết Gia Công CNC</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Định nghĩa sẵn các chi tiết cơ khí thường gia công để chọn nhanh khi Báo giá CNC và phát Lệnh sản xuất (LSX).
+              </p>
+            </div>
+            {canManageQuotations && (
+              <Button size="sm" variant="primary" icon={Plus} onClick={handleOpenAddPart}>
+                Thêm Chi Tiết Mới
+              </Button>
+            )}
+          </div>
+
+          <Table
+            isLoading={loading}
+            data={partsList}
+            columns={[
+              { header: 'Mã Chi Tiết', accessor: 'code', cellClassName: 'font-mono font-bold text-blue-600' },
+              {
+                header: 'Tên Chi Tiết Gia Công',
+                render: (row) => (
+                  <div>
+                    <div className="font-semibold text-slate-900">{row.name}</div>
+                    {row.note && <div className="text-[11px] text-slate-400 mt-0.5">{row.note}</div>}
+                  </div>
+                ),
+              },
+              { header: 'Bản Vẽ Mặc Định', accessor: 'drawing_code', cellClassName: 'font-mono text-xs font-semibold' },
+              {
+                header: 'Vật Liệu Đề Xuất',
+                render: (row) => (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                    {row.material_category || 'Thép S50C'}
+                  </span>
+                ),
+              },
+              { header: 'ĐVT', accessor: 'unit', cellClassName: 'text-center font-medium w-16' },
+              {
+                header: 'Đơn Giá Ước Tính',
+                render: (row) => (
+                  <span className="font-bold text-slate-900">
+                    {Number(row.unit_price_estimate || 0).toLocaleString()} đ
+                  </span>
+                ),
+              },
+              {
+                header: 'Thao Tác',
+                render: (row) => (
+                  <div className="flex items-center gap-1.5">
+                    {canManageQuotations && (
+                      <>
+                        <button
+                          onClick={() => handleOpenEditPart(row)}
+                          className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                          title="Chỉnh sửa chi tiết"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeletePart(row)}
+                          className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                          title="Xóa chi tiết"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ),
+              },
+            ]}
+          />
+        </div>
+      )}
+
 
       {/* Orders SubTab */}
       {activeSubTab === 'orders' && (
@@ -917,13 +1117,56 @@ export default function SalesModule({ initialSubTab }) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Tên chi tiết gia công"
-              placeholder="VD: Trục truyền động"
-              value={quotationForm.part_name}
-              onChange={(e) => setQuotationForm({ ...quotationForm, part_name: e.target.value })}
-              required
-            />
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Tên chi tiết gia công CNC <span className="text-rose-500">*</span>
+                </label>
+                {partsList.length > 0 && (
+                  <span className="text-[10px] text-blue-600 font-semibold">
+                    ({partsList.length} chi tiết danh mục)
+                  </span>
+                )}
+              </div>
+              <select
+                value={partsList.some((p) => p.name === quotationForm.part_name) ? quotationForm.part_name : (quotationForm.part_name ? '__custom__' : '')}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '__custom__') {
+                    setQuotationForm(prev => ({ ...prev, part_name: '' }));
+                  } else {
+                    const found = partsList.find((p) => p.name === val);
+                    setQuotationForm((prev) => ({
+                      ...prev,
+                      part_name: val,
+                      drawing_code: found?.drawing_code || prev.drawing_code,
+                      raw_material_cost: found?.unit_price_estimate ? Math.round(Number(found.unit_price_estimate) * 0.4) : prev.raw_material_cost,
+                    }));
+                  }
+                }}
+                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+              >
+                <option value="">-- Chọn từ Danh mục chi tiết CNC (Tự điền bản vẽ) --</option>
+                {partsList.map((p) => (
+                  <option key={p.id} value={p.name}>
+                    {p.code} - {p.name} {p.drawing_code ? `(Bản vẽ: ${p.drawing_code})` : ''}
+                  </option>
+                ))}
+                <option value="__custom__">✏️ Nhập chi tiết tùy chỉnh ngoài danh mục...</option>
+              </select>
+
+              {(!partsList.some((p) => p.name === quotationForm.part_name) || quotationForm.part_name === '') && (
+                <input
+                  type="text"
+                  placeholder="Gõ tên chi tiết gia công mới tại đây..."
+                  value={quotationForm.part_name}
+                  onChange={(e) => setQuotationForm({ ...quotationForm, part_name: e.target.value })}
+                  className="w-full mt-1.5 px-3 py-1.5 text-xs rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-blue-50/20"
+                  required
+                />
+              )}
+            </div>
+
             <Input
               label="Số lượng chi tiết"
               type="number"

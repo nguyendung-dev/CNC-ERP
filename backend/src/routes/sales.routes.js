@@ -48,4 +48,11 @@ router.post(
 );
 router.delete('/delivery-notes/:id', authorizeRoles('sales', 'warehouse'), salesController.deleteDeliveryNote);
 
+
+// Parts Catalog (Danh mục chi tiết gia công CNC)
+router.get('/parts', salesController.getParts);
+router.post('/parts', authorizeRoles('sales', 'production', 'admin'), validateBody(['name']), salesController.createPart);
+router.put('/parts/:id', authorizeRoles('sales', 'production', 'admin'), salesController.updatePart);
+router.delete('/parts/:id', authorizeRoles('sales', 'production', 'admin'), salesController.deletePart);
+
 module.exports = router;

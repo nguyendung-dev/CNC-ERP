@@ -294,6 +294,33 @@ async function initializeDatabase() {
         (7, 'Hoàn thành & Bàn giao kho', 'Thủ kho / Quản đốc', 'Đóng gói bọc xốp khí, nghiệm thu và nhập kho thành phẩm');
       `);
     }
+    // 13. Parts Table (Danh mục chi tiết gia công CNC - Part Catalog)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS parts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        code VARCHAR(50) UNIQUE NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        drawing_code VARCHAR(100) DEFAULT '',
+        material_category VARCHAR(100) DEFAULT 'Thép hợp kim S50C',
+        unit VARCHAR(50) DEFAULT 'Cái',
+        unit_price_estimate DECIMAL(15,2) DEFAULT 0,
+        note TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    const [existingParts] = await pool.query('SELECT COUNT(*) as count FROM parts');
+    if (existingParts[0].count === 0) {
+      await pool.query(`
+        INSERT INTO parts (code, name, drawing_code, material_category, unit, unit_price_estimate, note) VALUES
+        ('CT-TRUC-01', 'Trục then hoa truyền động CNC', 'DWG-TH-01', 'Thép S50C tôi cao tần', 'Cái', 450000, 'Gia công tiện + phay then hoa dung sai h6'),
+        ('CT-GOIDO-02', 'Gối đỡ vòng bi Nhôm 6061', 'DWG-GB-02', 'Nhôm 6061-T6', 'Cái', 320000, 'Phay CNC 4 mặt chuẩn, anode đen cứng'),
+        ('CT-BANHRANG-03', 'Bánh răng nghiêng hợp kim', 'DWG-BR-03', 'Thép SCM440 thấm cacbon', 'Cái', 680000, 'Tiện phôi, phay răng định hình, mài răng'),
+        ('CT-BACDAN-04', 'Bạc lót dẫn hướng đồng thau', 'DWG-BL-04', 'Đồng thanh C3604', 'Cái', 185000, 'Tiện chính xác dung sai lỗ H7'),
+        ('CT-KHUON-05', 'Tấm khuôn ép nhựa lõi Core', 'DWG-KN-05', 'Thép P20 mài phẳng', 'Bộ', 1850000, 'Phay 3D, cắt dây EDM, nhiệt luyện chân không');
+      `);
+    }
+
 
     // Check if seed data should be inserted (only if SEED_DEMO=true)
     if (process.env.SEED_DEMO === 'true') {

@@ -223,6 +223,23 @@ class SalesService {
   async deleteDeliveryNote(id) {
     return await salesRepo.deleteDeliveryNote(id);
   }
+
+  // Parts Catalog
+  async getParts() {
+    return await salesRepo.getAllParts();
+  }
+
+  async createPart(data) {
+    return await salesRepo.createPart(data);
+  }
+
+  async updatePart(id, data) {
+    return await salesRepo.updatePart(id, data);
+  }
+
+  async deletePart(id) {
+    return await salesRepo.deletePart(id);
+  }
 }
 
 module.exports = new SalesService();

@@ -155,6 +155,43 @@ class SalesController {
       next(err);
     }
   }
+
+  // Parts Catalog
+  async getParts(req, res, next) {
+    try {
+      const data = await salesService.getParts();
+      res.json({ success: true, count: data.length, data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async createPart(req, res, next) {
+    try {
+      const data = await salesService.createPart(req.body);
+      res.status(201).json({ success: true, message: 'Thêm chi tiết CNC vào danh mục thành công', data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updatePart(req, res, next) {
+    try {
+      const data = await salesService.updatePart(req.params.id, req.body);
+      res.json({ success: true, message: 'Cập nhật chi tiết CNC thành công', data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async deletePart(req, res, next) {
+    try {
+      await salesService.deletePart(req.params.id);
+      res.json({ success: true, message: 'Đã xóa chi tiết khỏi danh mục thành công' });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new SalesController();

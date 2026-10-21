@@ -485,6 +485,11 @@ export default function DashboardPage() {
           label: t('nav.sub_sales_deliveries', 'Phiếu Giao Hàng'),
           desc: t('nav.sub_sales_deliveries_desc', 'Lập & xuất kho thành phẩm'),
         },
+        {
+          id: 'parts',
+          label: 'Danh Mục Chi Tiết CNC',
+          desc: 'Quản lý mã chi tiết, bản vẽ & đơn vị tính',
+        },
       ],
     },
     {

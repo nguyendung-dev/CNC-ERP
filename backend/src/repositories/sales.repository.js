@@ -225,6 +225,50 @@ class SalesRepository {
     await pool.query('DELETE FROM delivery_notes WHERE id = ?', [id]);
     return true;
   }
+
+  // Parts Catalog CRUD
+  async getAllParts() {
+    const [rows] = await pool.query('SELECT * FROM parts ORDER BY id DESC');
+    return rows;
+  }
+
+  async getPartById(id) {
+    const [rows] = await pool.query('SELECT * FROM parts WHERE id = ?', [id]);
+    return rows[0] || null;
+  }
+
+  async createPart(data) {
+    const { code, name, drawing_code, material_category, unit, unit_price_estimate, note } = data;
+    const finalCode = code || ('CT-' + Date.now().toString().slice(-6));
+    const [result] = await pool.query(
+      `INSERT INTO parts (code, name, drawing_code, material_category, unit, unit_price_estimate, note)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [finalCode, name, drawing_code || '', material_category || '', unit || 'Cái', unit_price_estimate || 0, note || '']
+    );
+    return this.getPartById(result.insertId);
+  }
+
+  async updatePart(id, data) {
+    const { code, name, drawing_code, material_category, unit, unit_price_estimate, note } = data;
+    await pool.query(
+      `UPDATE parts SET
+        code = COALESCE(?, code),
+        name = COALESCE(?, name),
+        drawing_code = COALESCE(?, drawing_code),
+        material_category = COALESCE(?, material_category),
+        unit = COALESCE(?, unit),
+        unit_price_estimate = COALESCE(?, unit_price_estimate),
+        note = COALESCE(?, note)
+      WHERE id = ?`,
+      [code, name, drawing_code, material_category, unit, unit_price_estimate, note, id]
+    );
+    return this.getPartById(id);
+  }
+
+  async deletePart(id) {
+    await pool.query('DELETE FROM parts WHERE id = ?', [id]);
+    return true;
+  }
 }
 
 module.exports = new SalesRepository();
