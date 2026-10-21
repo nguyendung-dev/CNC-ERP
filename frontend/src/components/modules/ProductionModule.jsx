@@ -62,6 +62,7 @@ export default function ProductionModule({ initialSubTab }) {
   const [subcontracts, setSubcontracts] = useState([]);
   const [workshops, setWorkshops] = useState([]);
   const [salesOrders, setSalesOrders] = useState([]);
+  const [partsList, setPartsList] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Steps state (Thêm, sửa, xóa, cắt bỏ công đoạn)

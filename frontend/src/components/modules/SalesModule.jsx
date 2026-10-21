@@ -33,6 +33,7 @@ import * as XLSX from 'xlsx';
 export default function SalesModule({ initialSubTab }) {
   const { showSuccess, showError, confirmAction, confirmDelete } = useToast();
   const [drawingFile, setDrawingFile] = useState(null);
+  const [saveToCatalog, setSaveToCatalog] = useState(false);
   const { user } = useAuth();
 
   const canManageQuotations = user?.role === 'admin' || user?.role === 'sales';
@@ -184,6 +185,7 @@ export default function SalesModule({ initialSubTab }) {
         total_amount: estimatedTotal,
       });
       setIsQuotationModalOpen(false);
+      setSaveToCatalog(false);
       setQuotationForm({
         customer_name: '',
         customer_phone: '',
