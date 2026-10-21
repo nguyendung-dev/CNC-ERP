@@ -100,8 +100,6 @@
     "tab_inventory": "Cảnh báo kho",
     "checking": "Đang kiểm tra dữ liệu thực tế từ.",
     "empty": "Không có thông báo mới (Đồng bộ thời gian thực )",
-    "sync_interval": "Tự động đồng bộ mỗi 8 giây",
-    "mysql_live": "MySQL Live Sync",
     "delete_tooltip": "Xóa thông báo"
   },
   "toast": {

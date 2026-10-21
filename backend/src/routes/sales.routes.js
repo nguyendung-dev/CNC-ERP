@@ -38,6 +38,11 @@ router.post(
   validateBody(['customer_name', 'delivery_qty']),
   salesController.createDeliveryNote
 );
-router.delete('/delivery-notes/:id', authorizeRoles('sales'), salesController.deleteDeliveryNote);
+router.post(
+  '/delivery-notes/:id/confirm-export',
+  authorizeRoles('warehouse'),
+  salesController.confirmDeliveryExport
+);
+router.delete('/delivery-notes/:id', authorizeRoles('sales', 'warehouse'), salesController.deleteDeliveryNote);
 
 module.exports = router;

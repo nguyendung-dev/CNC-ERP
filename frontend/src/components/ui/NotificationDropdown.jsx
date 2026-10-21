@@ -221,10 +221,6 @@ export default function NotificationDropdown({ onSelectModule }) {
                   0 {t('notifications.unread_suffix')}
                 </span>
               )}
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200/80 whitespace-nowrap">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Realtime
-              </span>
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -339,10 +335,8 @@ export default function NotificationDropdown({ onSelectModule }) {
           {/* Footer - Realtime Live Sync Status */}
           <div className="px-4 py-2.5 bg-slate-50/90 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
             <span className="flex items-center gap-1.5 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              {t('notifications.sync_interval')}
             </span>
-            <span className="font-mono text-slate-400">MySQL Live Sync</span>
+
           </div>
         </div>
       )}

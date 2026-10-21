@@ -38,6 +38,20 @@ class ProductionController {
     }
   }
 
+  async handoverFinishedGoods(req, res, next) {
+    try {
+      const { qty } = req.body;
+      const data = await productionService.handoverFinishedGoods(req.params.id, qty);
+      res.json({
+        success: true,
+        message: `Đã nghiệm thu QC và bàn giao ${qty || data.target_qty} chi tiết thành phẩm vào kho!`,
+        data,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   // WIP Movements
   async getWipMovements(req, res, next) {
     try {

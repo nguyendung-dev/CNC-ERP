@@ -77,27 +77,118 @@ class SalesService {
     return await salesRepo.getAllDeliveryNotes();
   }
 
-  async createDeliveryNote(data) {
+  async createDeliveryNote(data, user) {
     if (!data.code) {
       data.code = `XK-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`;
     }
 
-    const deliveryNote = await salesRepo.createDeliveryNote(data);
+    const deliveryQty = Math.max(1, Number(data.delivery_qty) || 0);
 
-    // If linked to SO, update SO delivered quantity
+    // GATE 1: If linked to an SO, perform strict inventory and production readiness checks!
+    let order = null;
     if (data.so_id) {
-      const order = await salesRepo.getOrderById(data.so_id);
+      order = await salesRepo.getOrderById(data.so_id);
+      if (!order) {
+        const error = new Error('Không tìm thấy Đơn hàng SO liên kết');
+        error.status = 404;
+        throw error;
+      }
+
+      const machinedQty = Number(order.machined_qty || 0);
+      const deliveredQty = Number(order.delivered_qty || 0);
+      const availableToDeliver = Math.max(0, machinedQty - deliveredQty);
+
+      // BLOCK 1: Zero finished goods machined/inspected
+      if (machinedQty === 0) {
+        const error = new Error(
+          `Không thể xuất kho: Đơn hàng "${order.code}" hiện chưa có thành phẩm nào được xưởng sản xuất hoàn thành & kiểm định QC (Hiện tại: 0/${order.order_qty} cái). Vui lòng đợi bộ phận Sản xuất gia công & hoàn tất công đoạn!`
+        );
+        error.status = 400;
+        throw error;
+      }
+
+      // BLOCK 2: Requested quantity exceeds finished goods physically ready in warehouse
+      if (deliveryQty > availableToDeliver) {
+        const error = new Error(
+          `Số lượng xuất kho (${deliveryQty} cái) vượt quá số lượng thành phẩm thực tế sẵn sàng trong kho (${availableToDeliver} cái). Hiện chỉ có ${availableToDeliver}/${order.order_qty} chi tiết đã hoàn thiện sẵn sàng giao!`
+        );
+        error.status = 400;
+        throw error;
+      }
+    }
+
+    // GATE 2: Role-based status & execution
+    // If user is sales: created as "pending_warehouse" (Chờ Thủ kho kiểm tra & xuất kho thực tế)
+    // If user is warehouse or admin: directly "exported"
+    const userRole = user?.role || 'sales';
+    const isDirectExport = userRole === 'warehouse' || userRole === 'admin';
+
+    const status = isDirectExport ? 'exported' : 'pending_warehouse';
+    const createdBy = user?.full_name || (userRole === 'sales' ? 'Bộ phận Kinh doanh' : 'Thủ kho');
+    const checkedBy = isDirectExport ? (user?.full_name || 'Thủ kho xác nhận') : '';
+
+    const deliveryNote = await salesRepo.createDeliveryNote({
+      ...data,
+      delivery_qty: deliveryQty,
+      status,
+      created_by: createdBy,
+      checked_by: checkedBy,
+    });
+
+    // If direct export by Warehouse/Admin, update SO progress immediately
+    if (isDirectExport && order) {
+      const newDelivered = Number(order.delivered_qty || 0) + deliveryQty;
+      const isComplete = newDelivered >= Number(order.order_qty);
+      await salesRepo.updateOrderProgress(data.so_id, {
+        delivered_qty: newDelivered,
+        status: isComplete ? 'completed' : 'partially_delivered',
+      });
+    }
+
+    return deliveryNote;
+  }
+
+  async confirmDeliveryExport(id, user) {
+    const note = await salesRepo.getDeliveryNoteById(id);
+    if (!note) {
+      const error = new Error('Không tìm thấy phiếu xuất kho');
+      error.status = 404;
+      throw error;
+    }
+
+    if (note.status === 'exported') {
+      const error = new Error('Phiếu xuất kho này đã được xác nhận xuất kho trước đó rồi.');
+      error.status = 400;
+      throw error;
+    }
+
+    // Re-verify against SO
+    if (note.so_id) {
+      const order = await salesRepo.getOrderById(note.so_id);
       if (order) {
-        const newDelivered = Number(order.delivered_qty) + Number(data.delivery_qty);
+        const machinedQty = Number(order.machined_qty || 0);
+        const deliveredQty = Number(order.delivered_qty || 0);
+        const availableToDeliver = Math.max(0, machinedQty - deliveredQty);
+
+        if (Number(note.delivery_qty) > availableToDeliver) {
+          const error = new Error(
+            `Không thể xuất kho: Số lượng cần xuất (${note.delivery_qty}) vượt quá thành phẩm tồn kho hiện tại (${availableToDeliver} cái).`
+          );
+          error.status = 400;
+          throw error;
+        }
+
+        const newDelivered = deliveredQty + Number(note.delivery_qty);
         const isComplete = newDelivered >= Number(order.order_qty);
-        await salesRepo.updateOrderProgress(data.so_id, {
+        await salesRepo.updateOrderProgress(note.so_id, {
           delivered_qty: newDelivered,
           status: isComplete ? 'completed' : 'partially_delivered',
         });
       }
     }
 
-    return deliveryNote;
+    const checkedBy = user?.full_name || 'Thủ kho xác nhận';
+    return await salesRepo.updateDeliveryNoteStatus(id, 'exported', checkedBy);
   }
 
   async deleteQuotation(id) {

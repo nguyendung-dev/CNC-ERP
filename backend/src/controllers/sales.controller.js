@@ -78,8 +78,25 @@ class SalesController {
 
   async createDeliveryNote(req, res, next) {
     try {
-      const data = await salesService.createDeliveryNote(req.body);
-      res.status(201).json({ success: true, message: 'Tạo phiếu xuất kho giao hàng thành công', data });
+      const data = await salesService.createDeliveryNote(req.body, req.user);
+      const isPending = data.status === 'pending_warehouse';
+      const msg = isPending
+        ? 'Đã lập phiếu đề xuất xuất kho. Phiếu đang chờ Thủ kho kiểm tra thực tế và xác nhận xuất kho.'
+        : 'Thủ kho đã xác nhận kiểm tra và xuất kho thành công!';
+      res.status(201).json({ success: true, message: msg, data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async confirmDeliveryExport(req, res, next) {
+    try {
+      const data = await salesService.confirmDeliveryExport(req.params.id, req.user);
+      res.json({
+        success: true,
+        message: 'Thủ kho đã hoàn tất kiểm tra thành phẩm và xác nhận xuất kho giao khách thành công!',
+        data,
+      });
     } catch (err) {
       next(err);
     }

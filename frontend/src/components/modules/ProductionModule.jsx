@@ -204,6 +204,25 @@ export default function ProductionModule() {
     }
   };
 
+  const handleHandoverLsx = (lsx) => {
+    const remain = Math.max(1, (Number(lsx.target_qty) || 0) - (Number(lsx.completed_qty) || 0));
+    confirmDelete({
+      title: 'QC Nghiệm Thu & Bàn Giao Thành Phẩm',
+      itemName: lsx.code + ' (' + lsx.part_name + ')',
+      message: 'Bộ phận Sản xuất & QC xác nhận đã hoàn thành ' + remain + ' chi tiết đạt chuẩn kỹ thuật và bàn giao nhập kho thành phẩm cho Đơn hàng SO?',
+      confirmText: 'Bàn giao nhập kho',
+      onConfirm: async () => {
+        try {
+          await api.post('/production/orders/' + lsx.id + '/handover-finished', { qty: remain });
+          showSuccess('Bàn giao thành phẩm thành công!', 'Đã nhập kho thành phẩm ' + remain + ' chi tiết. Thủ kho và Sales hiện đã có thể làm thủ tục xuất hàng.');
+          loadData();
+        } catch (err) {
+          showError('Lỗi bàn giao', err.response?.data?.message || err.message);
+        }
+      },
+    });
+  };
+
   const handleDeleteLsx = (lsxId) => {
     confirmDelete({
       title: 'Xác Nhận Xóa Lệnh Sản Xuất (LSX)',
@@ -372,15 +391,34 @@ export default function ProductionModule() {
             },
             {
               header: 'Thao tác',
-              render: (row) => (
-                <button
-                  onClick={() => handleDeleteLsx(row.id)}
-                  className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                  title="Xóa lệnh sản xuất LSX"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              ),
+              render: (row) => {
+                const isFinished = Number(row.completed_qty) >= Number(row.target_qty);
+                return (
+                  <div className="flex items-center gap-1.5">
+                    {!isFinished && canManageProduction && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        icon={CheckCircle2}
+                        onClick={() => handleHandoverLsx(row)}
+                        className="text-xs py-1 px-2 border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+                        title="Nghiệm thu QC đạt và bàn giao thành phẩm nhập kho"
+                      >
+                        Bàn giao kho
+                      </Button>
+                    )}
+                    {canManageProduction && (
+                      <button
+                        onClick={() => handleDeleteLsx(row.id)}
+                        className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                        title="Xóa lệnh sản xuất LSX"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                );
+              },
             },
           ]}
         />

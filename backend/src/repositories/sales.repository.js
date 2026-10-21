@@ -101,15 +101,38 @@ class SalesRepository {
     return rows;
   }
 
+  async getDeliveryNoteById(id) {
+    const [rows] = await pool.query('SELECT * FROM delivery_notes WHERE id = ?', [id]);
+    return rows[0] || null;
+  }
+
   async createDeliveryNote(data) {
-    const { code, so_id, customer_name, drawing_code, delivery_qty, receiver_name, note } = data;
+    const { code, so_id, customer_name, drawing_code, delivery_qty, receiver_name, note, status, created_by, checked_by } = data;
     const [result] = await pool.query(
-      `INSERT INTO delivery_notes (code, so_id, customer_name, drawing_code, delivery_qty, receiver_name, note)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [code, so_id || null, customer_name, drawing_code || '', delivery_qty, receiver_name || '', note || '']
+      `INSERT INTO delivery_notes (code, so_id, customer_name, drawing_code, delivery_qty, receiver_name, note, status, created_by, checked_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        code,
+        so_id || null,
+        customer_name,
+        drawing_code || '',
+        delivery_qty,
+        receiver_name || '',
+        note || '',
+        status || 'exported',
+        created_by || '',
+        checked_by || '',
+      ]
     );
-    const [rows] = await pool.query('SELECT * FROM delivery_notes WHERE id = ?', [result.insertId]);
-    return rows[0];
+    return await this.getDeliveryNoteById(result.insertId);
+  }
+
+  async updateDeliveryNoteStatus(id, status, checked_by) {
+    await pool.query(
+      'UPDATE delivery_notes SET status = ?, checked_by = ? WHERE id = ?',
+      [status, checked_by || '', id]
+    );
+    return await this.getDeliveryNoteById(id);
   }
 
   async deleteQuotation(id) {

@@ -64,10 +64,46 @@ class ProductionService {
           ng_qty: newNg,
           status: isDone ? 'finished' : 'running',
         });
+
+        // Link with Sales Order (SO): Sync finished machined_qty
+        if (order.so_id) {
+          const salesRepo = require('../repositories/sales.repository');
+          await salesRepo.updateOrderProgress(order.so_id, {
+            machined_qty: newCompleted,
+            wip_qty: Math.max(0, Number(order.target_qty) - newCompleted),
+          });
+        }
       }
     }
 
     return movement;
+  }
+
+  async handoverFinishedGoods(id, qty) {
+    const order = await this.getProductionOrderById(id);
+    const addedQty = Math.max(1, Number(qty) || 0);
+    const newCompleted = Math.min(Number(order.target_qty), Number(order.completed_qty) + addedQty);
+    const isDone = newCompleted >= Number(order.target_qty);
+
+    await productionRepo.updateProductionStep(id, {
+      completed_qty: newCompleted,
+      status: isDone ? 'finished' : 'running',
+      current_step: isDone ? 'Đã QC nghiệm thu & Nhập kho thành phẩm' : order.current_step,
+    });
+
+    if (order.so_id) {
+      const salesRepo = require('../repositories/sales.repository');
+      const so = await salesRepo.getOrderById(order.so_id);
+      if (so) {
+        const newSoMachined = Math.min(Number(so.order_qty), Number(so.machined_qty || 0) + addedQty);
+        await salesRepo.updateOrderProgress(order.so_id, {
+          machined_qty: newSoMachined,
+          wip_qty: Math.max(0, Number(so.order_qty) - newSoMachined),
+        });
+      }
+    }
+
+    return await this.getProductionOrderById(id);
   }
 
   // Subcontracting

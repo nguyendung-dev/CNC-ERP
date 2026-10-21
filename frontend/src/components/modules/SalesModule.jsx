@@ -7,7 +7,9 @@ import {
   FileText, 
   Truck, 
   Download, 
-  CheckCircle2, 
+  CheckCircle2,
+  Clock,
+  AlertTriangle, 
   DollarSign, 
   Calculator,
   Trash2,
@@ -201,37 +203,93 @@ export default function SalesModule() {
     }
     const found = orders.find((o) => String(o.id) === String(soId));
     if (found) {
+      const machined = Number(found.machined_qty || 0);
+      const delivered = Number(found.delivered_qty || 0);
+      const available = Math.max(0, machined - delivered);
       setSelectedOrderForDelivery(found);
       setDeliveryForm((prev) => ({
         ...prev,
         so_id: found.id,
         customer_name: found.customer_name,
         drawing_code: found.drawing_code,
-        delivery_qty: Math.max(1, (Number(found.order_qty) || 0) - (Number(found.delivered_qty) || 0)),
+        delivery_qty: available > 0 ? available : 1,
       }));
     }
   };
 
   const handleOpenDeliveryModal = (order) => {
+    const machined = Number(order.machined_qty || 0);
+    const delivered = Number(order.delivered_qty || 0);
+    const available = Math.max(0, machined - delivered);
+
+    if (machined === 0) {
+      showError(
+        'Chưa thể xuất kho!',
+        `Đơn hàng "${order.code}" hiện chưa có thành phẩm nào được xưởng sản xuất hoàn thành & kiểm định QC (Hiện tại: 0/${order.order_qty} cái). Vui lòng chờ bộ phận Sản xuất gia công & bàn giao thành phẩm trước khi xuất kho!`
+      );
+      return;
+    }
+
+    if (available <= 0) {
+      showError(
+        'Đã xuất hết thành phẩm hiện có!',
+        `Đơn hàng "${order.code}" đã xuất kho đủ ${delivered}/${machined} chi tiết đã hoàn thiện. Vui lòng chờ xưởng sản xuất gia công đợt tiếp theo!`
+      );
+      return;
+    }
+
     setSelectedOrderForDelivery(order);
     setDeliveryForm({
       so_id: order.id,
       customer_name: order.customer_name,
       drawing_code: order.drawing_code,
-      delivery_qty: Math.max(1, order.order_qty - order.delivered_qty),
+      delivery_qty: available,
       receiver_name: '',
-      note: 'Giao hàng đợt mới kèm phiếu KCS',
+      note: 'Giao hàng kèm chứng chỉ KCS/QC',
     });
     setIsDeliveryModalOpen(true);
   };
 
+  const handleConfirmExport = (deliveryNote) => {
+    confirmAction({
+      type: 'primary',
+      title: 'Xác Nhận Kiểm Tra & Xuất Kho',
+      message: `Thủ kho xác nhận đã kiểm tra đủ số lượng ${deliveryNote.delivery_qty} chi tiết cho khách hàng "${deliveryNote.customer_name}" và chính thức xuất kho?`,
+      itemName: deliveryNote.code,
+      confirmText: 'Xác nhận xuất kho',
+      cancelText: 'Hủy',
+      onConfirm: async () => {
+        try {
+          await api.post(`/sales/delivery-notes/${deliveryNote.id}/confirm-export`);
+          showSuccess('Xuất kho thành công!', `Thủ kho đã hoàn tất kiểm tra và xuất kho phiếu "${deliveryNote.code}".`);
+          loadData();
+        } catch (err) {
+          showError('Lỗi xác nhận xuất kho', err.response?.data?.message || err.message);
+        }
+      },
+    });
+  };
+
   const handleCreateDelivery = async (e) => {
     e.preventDefault();
+    if (selectedOrderForDelivery) {
+      const machined = Number(selectedOrderForDelivery.machined_qty || 0);
+      const delivered = Number(selectedOrderForDelivery.delivered_qty || 0);
+      const available = Math.max(0, machined - delivered);
+      if (machined === 0) {
+        showError('Không thể xuất kho', `Đơn hàng này chưa có chi tiết thành phẩm nào được xưởng sản xuất hoàn thành & QC đạt (0/${selectedOrderForDelivery.order_qty}).`);
+        return;
+      }
+      if (Number(deliveryForm.delivery_qty) > available) {
+        showError('Vượt quá tồn kho thành phẩm', `Số lượng xuất (${deliveryForm.delivery_qty}) vượt quá số lượng thành phẩm sẵn sàng trong kho (${available} cái).`);
+        return;
+      }
+    }
     try {
-      await api.post('/sales/delivery-notes', deliveryForm);
+      const res = await api.post('/sales/delivery-notes', deliveryForm);
       setIsDeliveryModalOpen(false);
       loadData();
-      showSuccess('Xuất kho thành công', 'Phiếu xuất kho giao hàng đã được tạo thành công.');
+      showSuccess('Thao tác thành công', res.data?.message || 'Phiếu xuất kho giao hàng đã được tạo thành công.');
     } catch (err) {
       showError('Lỗi xuất kho', err.response?.data?.message || err.message);
     }
@@ -509,25 +567,49 @@ export default function SalesModule() {
             },
             {
               header: 'Thao tác',
-              render: (row) => (
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    onClick={() => handleOpenDeliveryModal(row)}
-                    size="sm"
-                    variant="outline"
-                    icon={Truck}
-                  >
-                    Xuất kho
-                  </Button>
-                  <button
-                    onClick={() => handleDeleteOrder(row.id)}
-                    className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                    title="Xóa đơn hàng SO"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ),
+              render: (row) => {
+                const machined = Number(row.machined_qty || 0);
+                const delivered = Number(row.delivered_qty || 0);
+                const available = Math.max(0, machined - delivered);
+
+                return (
+                  <div className="flex items-center gap-1.5">
+                    {machined === 0 ? (
+                      <button
+                        onClick={() => handleOpenDeliveryModal(row)}
+                        className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 flex items-center gap-1 transition"
+                        title="Chưa có thành phẩm nào gia công xong (Chờ sản xuất)"
+                      >
+                        <Clock className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Chờ SX (0/{row.order_qty})</span>
+                      </button>
+                    ) : available <= 0 ? (
+                      <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200">
+                        Đã giao hết ({row.delivered_qty}/{row.order_qty})
+                      </span>
+                    ) : (
+                      <Button
+                        onClick={() => handleOpenDeliveryModal(row)}
+                        size="sm"
+                        variant="primary"
+                        icon={Truck}
+                      >
+                        {user?.role === 'warehouse' ? 'Xuất kho' : 'Đề xuất giao'} ({available})
+                      </Button>
+                    )}
+
+                    {canManageQuotations && (
+                      <button
+                        onClick={() => handleDeleteOrder(row.id)}
+                        className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                        title="Xóa đơn hàng SO"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                );
+              },
             },
           ]}
         />
@@ -539,23 +621,64 @@ export default function SalesModule() {
           isLoading={loading}
           data={deliveries}
           columns={[
-            { header: 'Mã Phiếu XK', accessor: 'code', cellClassName: 'font-mono font-medium text-emerald-600' },
+            { header: 'Mã Phiếu XK', accessor: 'code', cellClassName: 'font-mono font-bold text-emerald-600' },
             { header: 'Khách hàng', accessor: 'customer_name' },
             { header: 'Mã bản vẽ', accessor: 'drawing_code', cellClassName: 'font-mono' },
-            { header: 'Số lượng giao', accessor: 'delivery_qty', cellClassName: 'font-bold text-slate-900' },
-            { header: 'Người nhận hàng', accessor: 'receiver_name' },
-            { header: 'Ghi chú / Chứng chỉ', accessor: 'note', cellClassName: 'text-xs text-slate-500' },
-            { header: 'Thời gian', accessor: 'created_at', cellClassName: 'text-xs text-slate-400 font-mono' },
+            { header: 'SL Giao', accessor: 'delivery_qty', cellClassName: 'font-bold text-slate-900' },
+            {
+              header: 'Trạng thái',
+              render: (row) => (
+                row.status === 'pending_warehouse' ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                    <Clock className="w-3 h-3 text-amber-500" /> Chờ Thủ kho kiểm hàng
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Đã xuất kho
+                  </span>
+                )
+              ),
+            },
+            {
+              header: 'Người lập / Kiểm tra',
+              render: (row) => (
+                <div className="text-xs">
+                  <p className="font-medium text-slate-800">{row.created_by || 'Kinh doanh'}</p>
+                  <p className="text-[10px] text-slate-400">{row.checked_by ? `TK: ${row.checked_by}` : 'Chưa kiểm tra'}</p>
+                </div>
+              ),
+            },
+            { header: 'Ghi chú / Chứng chỉ', accessor: 'note', cellClassName: 'text-xs text-slate-500 max-w-xs truncate' },
             {
               header: 'Thao tác',
               render: (row) => (
-                <button
-                  onClick={() => handleDeleteDelivery(row.id)}
-                  className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                  title="Xóa phiếu giao hàng"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  {row.status === 'pending_warehouse' && (user?.role === 'warehouse' || user?.role === 'admin') && (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      icon={CheckCircle2}
+                      onClick={() => handleConfirmExport(row)}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                    >
+                      Kiểm hàng & Xuất kho
+                    </Button>
+                  )}
+                  {row.status === 'pending_warehouse' && user?.role === 'sales' && (
+                    <span className="text-xs text-amber-600 italic font-medium px-2 py-1 bg-amber-50/60 rounded border border-amber-100">
+                      Chờ Thủ kho xuất
+                    </span>
+                  )}
+                  {canManageDeliveries && (
+                    <button
+                      onClick={() => handleDeleteDelivery(row.id)}
+                      className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                      title="Xóa phiếu giao hàng"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               ),
             },
           ]}
@@ -758,37 +881,78 @@ export default function SalesModule() {
       <Modal
         isOpen={isDeliveryModalOpen}
         onClose={() => setIsDeliveryModalOpen(false)}
-        title="Lập Phiếu Xuất Kho Giao Hàng Bán Hàng"
+        title={user?.role === 'warehouse' ? 'Kiểm Hàng & Xuất Kho Thành Phẩm' : 'Lập Phiếu Đề Nghị Xuất Kho Cho Thủ Kho'}
         footer={
           <>
             <Button variant="ghost" onClick={() => setIsDeliveryModalOpen(false)}>
-              Hủy
+              Hủy bỏ
             </Button>
-            <Button variant="primary" onClick={handleCreateDelivery} icon={Truck}>
-              Xác Nhận Xuất Hàng
+            <Button
+              variant="primary"
+              onClick={handleCreateDelivery}
+              icon={Truck}
+              disabled={
+                selectedOrderForDelivery &&
+                Math.max(0, (Number(selectedOrderForDelivery.machined_qty) || 0) - (Number(selectedOrderForDelivery.delivered_qty) || 0)) <= 0
+              }
+            >
+              {user?.role === 'warehouse' || user?.role === 'admin'
+                ? 'Xác Nhận Kiểm Hàng & Xuất Kho'
+                : 'Gửi Đề Nghị Xuất Cho Thủ Kho'}
             </Button>
           </>
         }
       >
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={handleCreateDelivery}>
           <div className="space-y-1">
             <Select
-              label="Chọn Đơn hàng SO cần xuất hàng (Tự động điền thông tin)"
+              label="Chọn Đơn hàng SO cần xuất hàng (Tự động kiểm tra tiến độ gia công)"
               value={deliveryForm.so_id || ''}
               onChange={(e) => handleSelectSoForDelivery(e.target.value)}
               options={[
                 { value: '', label: '-- Chọn Đơn hàng SO --' },
-                ...orders.map((o) => ({
-                  value: o.id,
-                  label: `${o.code} - ${o.customer_name} (${o.part_name} | Còn lại: ${Math.max(0, (Number(o.order_qty) || 0) - (Number(o.delivered_qty) || 0))})`,
-                })),
+                ...orders.map((o) => {
+                  const machined = Number(o.machined_qty) || 0;
+                  const delivered = Number(o.delivered_qty) || 0;
+                  const avail = Math.max(0, machined - delivered);
+                  return {
+                    value: o.id,
+                    label: `${o.code} - ${o.customer_name} (${o.part_name} | Sẵn sàng: ${avail}/${o.order_qty})`,
+                  };
+                }),
               ]}
             />
-            {deliveryForm.so_id && (
-              <p className="text-xs text-blue-600 font-medium mt-1">
-                Đã tự động điền Tên khách hàng, Mã bản vẽ và Số lượng còn lại từ Đơn hàng SO.
-              </p>
-            )}
+            {selectedOrderForDelivery && (() => {
+              const machined = Number(selectedOrderForDelivery.machined_qty || 0);
+              const delivered = Number(selectedOrderForDelivery.delivered_qty || 0);
+              const available = Math.max(0, machined - delivered);
+
+              return (
+                <div className="mt-2 p-3 bg-blue-50/80 border border-blue-200 rounded-xl text-xs space-y-1.5">
+                  <div className="flex justify-between font-bold text-slate-800">
+                    <span>Đơn hàng: {selectedOrderForDelivery.code} - {selectedOrderForDelivery.part_name}</span>
+                    <span className="text-blue-600 font-mono">Tổng đặt: {selectedOrderForDelivery.order_qty} cái</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-slate-600 pt-1 border-t border-blue-200/60 font-medium">
+                    <div>Xưởng SX xong: <strong className="text-emerald-700">{machined}</strong> cái</div>
+                    <div>Đã giao trước đó: <strong className="text-slate-800">{delivered}</strong> cái</div>
+                    <div>Sẵn sàng xuất: <strong className="text-blue-700 font-bold">{available} cái</strong></div>
+                  </div>
+                  {machined === 0 && (
+                    <div className="p-2 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 flex items-center gap-1.5 mt-1 font-semibold">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+                      <span>Đơn hàng này chưa có chi tiết nào gia công xong (0/{selectedOrderForDelivery.order_qty}). Chưa thể xuất kho!</span>
+                    </div>
+                  )}
+                  {machined > 0 && available <= 0 && (
+                    <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 flex items-center gap-1.5 mt-1 font-semibold">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
+                      <span>Toàn bộ {delivered} chi tiết thành phẩm hoàn thiện đã được xuất giao hết. Vui lòng chờ xưởng làm thêm!</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
           <Input
             label="Khách hàng"

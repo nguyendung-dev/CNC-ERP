@@ -17,6 +17,7 @@ router.post(
   productionController.createProductionOrder
 );
 router.patch('/orders/:id/step', authorizeRoles('production'), productionController.updateProductionStep);
+router.post('/orders/:id/handover-finished', authorizeRoles('production'), productionController.handoverFinishedGoods);
 router.delete('/orders/:id', authorizeRoles('production'), productionController.deleteProductionOrder);
 
 // WIP Movements
