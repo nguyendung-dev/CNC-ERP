@@ -154,7 +154,7 @@ export function ToastProvider({ children }) {
       {mounted &&
         createPortal(
           <>
-            {/* 1. TOAST NOTIFICATIONS CONTAINER (Top-Right, matching user design) */}
+            {/* 1. TOAST NOTIFICATIONS CONTAINER (Top-Right) */}
             <div className="fixed top-5 right-5 z-[999999] flex flex-col gap-3 pointer-events-none max-w-sm sm:max-w-md w-full">
               {toasts.map((toast) => (
                 <div
@@ -211,7 +211,7 @@ export function ToastProvider({ children }) {
               ))}
             </div>
 
-            {/* 2. CONFIRM DELETE MODAL DIALOG */}
+            {/* 2. CONFIRM DELETE MODAL DIALOG (Small, compact layout) */}
             {confirmModal.isOpen && (
               <div className="fixed inset-0 z-[999998] flex items-center justify-center p-4">
                 {/* Full-screen Edge-to-Edge Backdrop */}
@@ -221,7 +221,10 @@ export function ToastProvider({ children }) {
                 />
 
                 {/* Modal Card */}
-                <div className="relative z-10 bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
+                <div
+                  style={{ maxWidth: '440px', width: '100%' }}
+                  className="relative z-10 bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150"
+                >
                   <div className="flex items-start gap-3.5">
                     <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
                       <Trash2 className="w-5 h-5" />
@@ -275,7 +278,7 @@ export function ToastProvider({ children }) {
               </div>
             )}
 
-            {/* 3. PROMINENT SUCCESS POPUP MODAL (Center of screen, exactly matching creation popup request) */}
+            {/* 3. PROMINENT SUCCESS POPUP MODAL (Same compact size and layout as Confirm Delete modal) */}
             {successModal.isOpen && (
               <div className="fixed inset-0 z-[9999999] flex items-center justify-center p-4">
                 {/* Dark Blur Backdrop */}
@@ -284,35 +287,38 @@ export function ToastProvider({ children }) {
                   onClick={closeSuccessModal}
                 />
 
-                {/* Success Card */}
-                <div className="relative z-10 bg-white rounded-3xl max-w-sm sm:max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150 text-center">
-                  {/* Round Green Icon */}
-                  <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
-                    <CheckCircle2 className="w-9 h-9 stroke-[2.5]" />
+                {/* Success Card - Compact layout matching delete modal */}
+                <div
+                  style={{ maxWidth: '440px', width: '100%' }}
+                  className="relative z-10 bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150"
+                >
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-bold text-slate-900">
+                        {successModal.title}
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                        {successModal.message}
+                      </p>
+                      {successModal.itemName && (
+                        <div className="mt-2.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs font-mono font-semibold break-all">
+                          {successModal.itemName}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <div>
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900">
-                      {successModal.title}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
-                      {successModal.message}
-                    </p>
-                    {successModal.itemName && (
-                      <div className="mt-3.5 px-3 py-2 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs font-mono font-semibold break-all">
-                        {successModal.itemName}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="pt-2">
+                  <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
                     <button
                       type="button"
                       onClick={closeSuccessModal}
-                      className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                      className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-98 rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer"
                     >
-                      <Check className="w-4 h-4 stroke-[3]" />
-                      Hoàn tất & Đóng
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>Hoàn tất & Đóng</span>
                     </button>
                   </div>
                 </div>

@@ -45,6 +45,7 @@ import AppHeader from '../components/layout/AppHeader';
 import Sidebar from '../components/layout/Sidebar';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
+import Badge from '../components/ui/Badge';
 
 // Modules
 import SalesModule from '../components/modules/SalesModule';
@@ -691,10 +692,7 @@ export default function DashboardPage() {
                                     </span>
                                   </td>
                                   <td className="py-3 px-3 text-center">
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                      Hoạt động
-                                    </span>
+                                    <Badge status={u.status || "active"} />
                                   </td>
                                   <td className="py-3 px-3 text-right">
                                     <div className="flex items-center justify-end gap-1.5">
@@ -1041,7 +1039,7 @@ export default function DashboardPage() {
                             </div>
                             <div className="text-[11px] text-slate-400 mt-1 flex justify-between">
                               <span>Dở dang WIP: {order.wip_qty}</span>
-                              <span className="font-semibold text-emerald-600">{order.status}</span>
+                              <Badge status={order.status}>{order.status}</Badge>
                             </div>
                           </div>
                         </div>
@@ -1153,9 +1151,7 @@ export default function DashboardPage() {
                             Hẹn trả: {sub.promise_date ? new Date(sub.promise_date).toLocaleDateString('vi-VN') : 'Sắp tới'} • SL: {sub.send_qty}
                           </span>
                         </div>
-                        <span className="text-[10px] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
-                          {sub.status}
-                        </span>
+                        <Badge status={sub.status}>{sub.status}</Badge>
                       </div>
                     ))}
                   </div>

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import api from '../../api';
 import Table from '../ui/Table';
-import Badge from '../ui/Badge';
+import Badge, { STATUS_LABELS } from '../ui/Badge';
 import Button from '../ui/Button';
 import ExportButton from '../ui/ExportButton';
 import Modal from '../ui/Modal';
@@ -271,7 +271,7 @@ export default function SalesModule() {
             'Mã bản vẽ': q.drawing_code,
             'Số lượng': q.quantity,
             'Tổng tiền (VNĐ)': q.total_amount,
-            'Trạng thái': q.status,
+            'Trạng thái': (STATUS_LABELS && STATUS_LABELS[q.status]) || q.status,
             'Ngày tạo': q.created_at,
           }))
         : orders.map((o) => ({
@@ -284,7 +284,7 @@ export default function SalesModule() {
             'Dở dang (WIP)': o.wip_qty,
             'Giá trị': o.total_price,
             'Hạn giao': o.delivery_deadline,
-            'Trạng thái': o.status,
+            'Trạng thái': (STATUS_LABELS && STATUS_LABELS[o.status]) || o.status,
           }));
 
     const ws = XLSX.utils.json_to_sheet(dataToExport);
