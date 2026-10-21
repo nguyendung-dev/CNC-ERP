@@ -1,11 +1,12 @@
 const express = require('express');
 const reportsController = require('../controllers/reports.controller');
-const { authMiddleware } = require('../middlewares/auth.middleware');
+const { authMiddleware, authorizeRoles } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
 router.use(authMiddleware);
 
-router.get('/dashboard', reportsController.getDashboardSummary);
+// Only admin and accountant can access executive KPI report
+router.get('/dashboard', authorizeRoles('accountant'), reportsController.getDashboardSummary);
 
 module.exports = router;

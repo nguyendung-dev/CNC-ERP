@@ -19,9 +19,12 @@ import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import { Input, Select } from '../ui/Input';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ProductionModule() {
   const { showSuccess, showError, confirmDelete } = useToast();
+  const { user } = useAuth();
+  const canManageProduction = user?.role === 'admin' || user?.role === 'production';
   const [subTab, setSubTab] = useState('lsx'); // 'lsx' | 'wip' | 'subcontract'
   const [orders, setOrders] = useState([]);
   const [movements, setMovements] = useState([]);
@@ -298,17 +301,17 @@ export default function ProductionModule() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {subTab === 'lsx' && (
+          {subTab === 'lsx' && canManageProduction && (
             <Button size="md" icon={Plus} onClick={() => setIsLsxModalOpen(true)}>
               Tạo LSX mới
             </Button>
           )}
-          {subTab === 'wip' && (
+          {subTab === 'wip' && canManageProduction && (
             <Button size="md" icon={Workflow} onClick={() => setIsWipModalOpen(true)}>
               Phiếu chuyển công đoạn
             </Button>
           )}
-          {subTab === 'subcontract' && (
+          {subTab === 'subcontract' && canManageProduction && (
             <Button size="md" icon={Truck} onClick={() => setIsSubModalOpen(true)}>
               Gửi gia công ngoài
             </Button>

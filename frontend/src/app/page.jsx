@@ -352,8 +352,18 @@ export default function DashboardPage() {
     });
   };
 
-  // Nav items definition (matching reference screenshot: Trang chủ, Bán hàng, ...)
-  const navItems = [
+  // Role-based Nav Permissions Map: Only Admin sees all 7 modules!
+  const ROLE_NAV_PERMISSIONS = {
+    admin: ['home', 'sales', 'inventory', 'production', 'finance', 'reports', 'settings'],
+    sales: ['home', 'sales', 'inventory'],
+    production: ['home', 'production', 'inventory'],
+    warehouse: ['home', 'inventory', 'production'],
+    accountant: ['home', 'finance', 'sales', 'reports'],
+  };
+
+  const allowedNavIds = (user && ROLE_NAV_PERMISSIONS[user.role]) || ['home'];
+
+  const allNavItems = [
     { id: 'home', label: 'Trang chủ', icon: Home },
     { id: 'sales', label: 'Bán hàng', icon: ShoppingCart },
     { id: 'inventory', label: 'Kho vật tư', icon: Package },
@@ -362,6 +372,8 @@ export default function DashboardPage() {
     { id: 'reports', label: 'Báo cáo', icon: BarChart3 },
     { id: 'settings', label: 'Phân quyền', icon: SlidersHorizontal },
   ];
+
+  const navItems = allNavItems.filter((item) => allowedNavIds.includes(item.id));
 
   // Page Titles Map (passed as prop to AppHeader, prominent & bold)
   const pageTitles = {
@@ -417,7 +429,28 @@ export default function DashboardPage() {
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 pb-24 md:pb-6">
-          {/* Module Views */}
+          {/* Permission Guard: Unauthorized Access Denied */}
+          {!allowedNavIds.includes(activeNav) && (
+            <div className="py-16 flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-sm">
+                <ShieldCheck className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Không Có Quyền Truy Cập</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Tài khoản của bạn ({ROLE_LABELS[user?.role] || user?.role}) không được phân quyền truy cập phân hệ này. Chỉ Quản trị viên (Admin) mới có toàn quyền xem tất cả các mục.
+                </p>
+              </div>
+              <button
+                onClick={() => setActiveNav('home')}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition shadow-xs cursor-pointer"
+              >
+                Quay về Trang chủ
+              </button>
+            </div>
+          )}
+
+          {/* Module Views (Guarded by permission) */}
           {activeNav === 'sales' && <SalesModule />}
           {activeNav === 'inventory' && <InventoryModule />}
           {activeNav === 'production' && <ProductionModule />}
@@ -970,20 +1003,28 @@ export default function DashboardPage() {
                           </span>
 
                           <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={() => handleApprove(task)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-xs transition active:scale-95"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                              Duyệt
-                            </button>
-                            <button
-                              onClick={() => handleReject(task)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-rose-400 text-rose-600 hover:bg-rose-50 text-xs font-semibold rounded-lg transition active:scale-95"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                              Từ chối
-                            </button>
+                            {user?.role === 'admin' ? (
+                              <>
+                                <button
+                                  onClick={() => handleApprove(task)}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-xs transition active:scale-95 cursor-pointer"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  Duyệt
+                                </button>
+                                <button
+                                  onClick={() => handleReject(task)}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-rose-400 text-rose-600 hover:bg-rose-50 text-xs font-semibold rounded-lg transition active:scale-95 cursor-pointer"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                  Từ chối
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">
+                                Chờ Admin duyệt
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1158,7 +1199,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Widget 3: Tóm tắt Công nợ & Dòng tiền */}
-                {dashboardStats && (
+                {dashboardStats && (user?.role === 'admin' || user?.role === 'accountant') && (
                   <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 space-y-3">
                     <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
                       <DollarSign className="w-4 h-4 text-emerald-600" /> Cân đối Công nợ Doanh nghiệp

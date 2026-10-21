@@ -20,10 +20,13 @@ import ExportButton from '../ui/ExportButton';
 import Modal from '../ui/Modal';
 import { Input, Select } from '../ui/Input';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import * as XLSX from 'xlsx';
 
 export default function InventoryModule() {
   const { showSuccess, showError, confirmDelete } = useToast();
+  const { user } = useAuth();
+  const canManageInventory = user?.role === 'admin' || user?.role === 'warehouse';
   const [materials, setMaterials] = useState([]);
   const [lowStockList, setLowStockList] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -272,14 +275,16 @@ export default function InventoryModule() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            onClick={() => setIsAddModalOpen(true)}
-            icon={Plus}
-            variant="primary"
-            size="md"
-          >
-            Thêm vật tư
-          </Button>
+          {canManageInventory && (
+            <Button
+              onClick={() => setIsAddModalOpen(true)}
+              icon={Plus}
+              variant="primary"
+              size="md"
+            >
+              Thêm vật tư
+            </Button>
+          )}
           <ExportButton onClick={exportExcel}>
             Xuất Excel tồn kho (XLSX)
           </ExportButton>

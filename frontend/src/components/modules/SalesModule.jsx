@@ -20,10 +20,22 @@ import ExportButton from '../ui/ExportButton';
 import Modal from '../ui/Modal';
 import { Input, Select } from '../ui/Input';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import * as XLSX from 'xlsx';
 
 export default function SalesModule() {
   const { showSuccess, showError, confirmDelete } = useToast();
+  const { user } = useAuth();
+
+  const canManageQuotations = user?.role === 'admin' || user?.role === 'sales';
+  const canManageDeliveries = user?.role === 'admin' || user?.role === 'sales' || user?.role === 'warehouse';
+
+  // If accountant or warehouse, hide quotations tab
+  useEffect(() => {
+    if (!canManageQuotations && activeSubTab === 'quotations') {
+      setActiveSubTab('orders');
+    }
+  }, [user?.role, canManageQuotations, activeSubTab]);
   const [activeSubTab, setActiveSubTab] = useState('quotations'); // 'quotations' | 'orders' | 'deliveries'
   const [quotations, setQuotations] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -298,19 +310,21 @@ export default function SalesModule() {
       {/* Sub Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60 overflow-x-auto max-w-full no-scrollbar">
-          <button
-            onClick={() => setActiveSubTab('quotations')}
-            className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
-              activeSubTab === 'quotations'
-                ? 'bg-white text-blue-600 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
-          >
-            <span>Báo giá CNC</span>
-            <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${activeSubTab === 'quotations' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'}`}>
-              {quotations.length}
-            </span>
-          </button>
+          {canManageQuotations && (
+            <button
+              onClick={() => setActiveSubTab('quotations')}
+              className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+                activeSubTab === 'quotations'
+                  ? 'bg-white text-blue-600 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              }`}
+            >
+              <span>Báo giá CNC</span>
+              <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${activeSubTab === 'quotations' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'}`}>
+                {quotations.length}
+              </span>
+            </button>
+          )}
           <button
             onClick={() => setActiveSubTab('orders')}
             className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
@@ -340,7 +354,7 @@ export default function SalesModule() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {activeSubTab === 'quotations' && (
+          {activeSubTab === 'quotations' && canManageQuotations && (
             <Button
               onClick={() => setIsQuotationModalOpen(true)}
               icon={Plus}
@@ -350,7 +364,7 @@ export default function SalesModule() {
               Lập báo giá mới
             </Button>
           )}
-          {activeSubTab === 'deliveries' && (
+          {activeSubTab === 'deliveries' && canManageDeliveries && (
             <Button
               onClick={handleOpenNewDelivery}
               icon={Plus}
