@@ -659,6 +659,100 @@ export default function ProductionModule() {
         />
       )}
 
+      {/* Workshops SubTab */}
+      {subTab === 'workshops' && (
+        <Table
+          isLoading={loading}
+          data={workshops}
+          emptyMessage="Chưa có phân xưởng nào. Bấm 'Thêm phân xưởng mới' để khởi tạo."
+          columns={[
+            {
+              header: 'Mã Xưởng',
+              accessor: 'code',
+              cellClassName: 'font-mono font-bold text-blue-600',
+            },
+            {
+              header: 'Tên Phân Xưởng',
+              render: (row) => (
+                <div>
+                  <div className="font-bold text-slate-800">{row.name}</div>
+                  {row.description && (
+                    <div className="text-xs text-slate-400 mt-0.5">{row.description}</div>
+                  )}
+                </div>
+              ),
+            },
+            {
+              header: 'Quản Lý & Liên Hệ',
+              render: (row) => (
+                <div className="text-xs">
+                  <div className="font-semibold text-slate-800">{row.manager_name || 'Chưa chỉ định'}</div>
+                  {row.phone && (
+                    <div className="text-slate-500 font-mono mt-0.5">{row.phone}</div>
+                  )}
+                </div>
+              ),
+            },
+            {
+              header: 'Vị Trí / Khu Vực',
+              accessor: 'location',
+              cellClassName: 'text-xs text-slate-600',
+            },
+            {
+              header: 'Quy Mô Máy & Thợ',
+              render: (row) => (
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                    {row.machine_count || 0} máy CNC
+                  </span>
+                  <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                    {row.operator_count || 0} thợ
+                  </span>
+                </div>
+              ),
+            },
+            {
+              header: 'Dàn Thiết Bị Chính',
+              accessor: 'main_machines',
+              cellClassName: 'text-xs text-slate-500',
+            },
+            {
+              header: 'Trạng Thái',
+              render: (row) => (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${row.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600'}`}>
+                  {row.status === 'active' ? '● Hoạt động' : 'Tạm dừng'}
+                </span>
+              ),
+            },
+            {
+              header: 'Thao Tác',
+              render: (row) => (
+                <div className="flex items-center gap-1.5">
+                  {canManageProduction && (
+                    <>
+                      <button
+                        onClick={() => handleOpenEditWorkshop(row)}
+                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                        title="Chỉnh sửa xưởng"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteWorkshop(row)}
+                        className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                        title="Xóa phân xưởng"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              ),
+            },
+          ]}
+        />
+      )}
+
       {/* Create LSX Modal */}
       <Modal
         isOpen={isLsxModalOpen}

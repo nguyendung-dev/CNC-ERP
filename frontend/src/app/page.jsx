@@ -760,7 +760,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                    <div className="flex-1 overflow-x-auto">
+                    <div className="flex-1 overflow-x-auto custom-scrollbar">
                       {usersLoading ? (
                         <div className="py-12 text-center text-xs text-slate-400 flex flex-col items-center gap-2">
                           <RefreshCw className="w-5 h-5 animate-spin text-blue-600" />
@@ -771,14 +771,14 @@ export default function DashboardPage() {
                           Chưa có dữ liệu người dùng. Vui lòng bấm &quot;Làm mới dữ liệu&quot;.
                         </div>
                       ) : (
-                        <table className="w-full text-left text-xs">
+                        <table className="w-full min-w-[650px] text-left text-xs whitespace-nowrap">
                           <thead>
                             <tr className="border-b border-slate-100 text-slate-400 font-semibold">
-                              <th className="py-2.5 px-3">Nhân viên</th>
-                              <th className="py-2.5 px-3">Email & Tên đăng nhập</th>
-                              <th className="py-2.5 px-3">Phân quyền</th>
-                              <th className="py-2.5 px-3 text-center">Trạng thái</th>
-                              <th className="py-2.5 px-3 text-right">Thao tác</th>
+                              <th className="py-2.5 px-3 whitespace-nowrap">Nhân viên</th>
+                              <th className="py-2.5 px-3 whitespace-nowrap">Email & Tên đăng nhập</th>
+                              <th className="py-2.5 px-3 whitespace-nowrap">Phân quyền</th>
+                              <th className="py-2.5 px-3 text-center whitespace-nowrap">Trạng thái</th>
+                              <th className="py-2.5 px-3 text-right whitespace-nowrap">Thao tác</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">

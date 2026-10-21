@@ -13,6 +13,8 @@ export default function Table({
   enablePagination = true,
   initialPageSize = 10,
   pageSizeOptions = [5, 10, 20, 50],
+  minWidth = 'min-w-[1050px]',
+  className = '',
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -45,15 +47,15 @@ export default function Table({
     : data;
 
   return (
-    <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-xs">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-sm">
+    <div className={`rounded-xl border border-slate-200 overflow-hidden bg-white shadow-xs ${className}`}>
+      <div className="overflow-x-auto custom-scrollbar">
+        <table className={`w-full text-left border-collapse text-sm ${minWidth}`}>
           <thead>
             <tr className="bg-slate-50/80 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
               {columns.map((col, idx) => (
                 <th
                   key={idx}
-                  className={`py-3.5 px-4 ${col.className || ''}`}
+                  className={`py-3.5 px-4 whitespace-nowrap ${col.className || ''}`}
                 >
                   {col.header}
                 </th>
@@ -65,10 +67,13 @@ export default function Table({
               <tr
                 key={row.id || rowIdx}
                 onClick={() => onRowClick && onRowClick(row)}
-                className={`transition hover:bg-slate-50/70 ${onRowClick ? 'cursor-pointer' : ''}`}
+                className={`transition-colors hover:bg-slate-50/80 ${onRowClick ? 'cursor-pointer' : ''}`}
               >
                 {columns.map((col, colIdx) => (
-                  <td key={colIdx} className={`py-3 px-4 text-slate-700 ${col.cellClassName || ''}`}>
+                  <td
+                    key={colIdx}
+                    className={`py-3.5 px-4 text-slate-700 ${col.wrap ? '' : 'whitespace-nowrap'} ${col.cellClassName || ''}`}
+                  >
                     {col.render ? col.render(row, (currentPage - 1) * pageSize + rowIdx) : row[col.accessor]}
                   </td>
                 ))}
