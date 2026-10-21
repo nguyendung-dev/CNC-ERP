@@ -24,6 +24,23 @@ import { Input, Select } from '../ui/Input';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 
+
+export const FACTORY_MACHINES = [
+  'Máy Phay CNC Mazak VCN-530C (#01)',
+  'Máy Phay CNC Mazak VCN-530C (#02)',
+  'Máy Phay CNC Mazak VCN-530C (#03)',
+  'Máy Tiện CNC Doosan Lynx 220 (#01)',
+  'Máy Tiện CNC Doosan Lynx 220 (#02)',
+  'Máy Cắt Dây CNC Sodick AQ327L (#01)',
+  'Máy Cắt Dây CNC Sodick AQ327L (#02)',
+  'Máy Mài Phẳng Okamoto ACC-DX (#01)',
+  'Máy Mài Phẳng Okamoto ACC-DX (#02)',
+  'Máy Cưa Vòng Amada HFA-300 Tự Động',
+  'Máy Phay Cơ Vạn Năng Bridgeport',
+  'Tổ Nguội, Khử Bavia & Lắp Ráp Jig',
+  'Máy Đo 3D CMM Mitutoyo & Bàn Map',
+];
+
 export const STANDARD_CNC_STEPS = [
   { value: 'Cắt phôi', label: '1. Cắt phôi (Thợ xưởng / Kỹ thuật phôi)', role: 'Kỹ thuật phôi' },
   { value: 'Phay CNC mặt chuẩn', label: '2. Phay CNC mặt chuẩn (Thợ máy Phay CNC)', role: 'Thợ máy Phay CNC' },
@@ -457,12 +474,28 @@ export default function ProductionModule({ initialSubTab }) {
       ? STANDARD_CNC_STEPS[currentIndex + 1].value
       : (order.current_step === 'Kiểm tra KCS / QC' ? 'Đã QC nghiệm thu & Nhập kho thành phẩm' : 'Phay CNC mặt chuẩn');
 
+    let suggestedMachine = 'Máy Phay CNC Mazak VCN-530C (#01)';
+    if (nextStep.includes('Cắt phôi')) suggestedMachine = 'Máy Cưa Vòng Amada HFA-300 Tự Động';
+    else if (nextStep.includes('Tiện')) suggestedMachine = 'Máy Tiện CNC Doosan Lynx 220 (#01)';
+    else if (nextStep.includes('Cắt dây') || nextStep.includes('EDM')) suggestedMachine = 'Máy Cắt Dây CNC Sodick AQ327L (#01)';
+    else if (nextStep.includes('Mài')) suggestedMachine = 'Máy Mài Phẳng Okamoto ACC-DX (#01)';
+    else if (nextStep.includes('QC') || nextStep.includes('KCS')) suggestedMachine = 'Máy Đo 3D CMM Mitutoyo & Bàn Map';
+
+    const matchingOp = operators.find(op => {
+      if (nextStep.includes('Cắt phôi')) return op.skill_level?.includes('cưa') || op.skill_level?.includes('phôi');
+      if (nextStep.includes('Tiện')) return op.skill_level?.includes('Tiện');
+      if (nextStep.includes('Phay')) return op.skill_level?.includes('Phay');
+      if (nextStep.includes('Cắt dây')) return op.skill_level?.includes('Cắt');
+      if (nextStep.includes('Mài')) return op.skill_level?.includes('Mài');
+      return false;
+    });
+
     setWipForm({
       production_order_id: order.id,
       from_step: order.current_step || 'Cắt phôi',
       to_step: nextStep,
-      operator: user?.full_name || '',
-      machine_name: '',
+      operator: matchingOp?.name || user?.full_name || '',
+      machine_name: suggestedMachine,
       qty_passed: remaining,
       qty_failed: 0,
       fail_reason: '',
@@ -1260,19 +1293,100 @@ export default function ProductionModule({ initialSubTab }) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Kỹ sư / Thợ vận hành"
-              placeholder="Nguyễn Văn A"
-              value={wipForm.operator}
-              onChange={(e) => setWipForm({ ...wipForm, operator: e.target.value })}
-            />
-            <Input
-              label="Tổ máy thực hiện"
-              placeholder="Mazak VCN-530C / Doosan Lynx"
-              value={wipForm.machine_name}
-              onChange={(e) => setWipForm({ ...wipForm, machine_name: e.target.value })}
-            />
+                    {/* Thợ máy CNC & Tổ máy thực hiện (Dropdown thông minh + Nhập linh hoạt) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Thợ máy CNC vận hành
+                </label>
+                {operators.length > 0 && (
+                  <span className="text-[10px] text-blue-600 font-semibold">
+                    ({operators.length} thợ máy)
+                  </span>
+                )}
+              </div>
+              <select
+                value={operators.some((op) => op.name === wipForm.operator) ? wipForm.operator : (wipForm.operator ? '__custom__' : '')}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '__custom__') {
+                    setWipForm(prev => ({ ...prev, operator: '' }));
+                  } else {
+                    setWipForm(prev => ({ ...prev, operator: val }));
+                  }
+                }}
+                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+              >
+                <option value="">-- Chọn thợ máy CNC phụ trách --</option>
+                {operators.map((op) => (
+                  <option key={op.id} value={op.name}>
+                    {op.code} - {op.name} ({op.skill_level})
+                  </option>
+                ))}
+                <option value="__custom__">✏️ Nhập tên thợ máy khác...</option>
+              </select>
+              {(!operators.some((op) => op.name === wipForm.operator) || wipForm.operator === '') && (
+                <input
+                  type="text"
+                  placeholder="Gõ tên thợ máy tại đây..."
+                  value={wipForm.operator}
+                  onChange={(e) => setWipForm({ ...wipForm, operator: e.target.value })}
+                  className="w-full mt-1.5 px-3 py-1.5 text-xs rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-blue-50/20"
+                />
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Tổ máy CNC thực hiện
+              </label>
+              <select
+                value={FACTORY_MACHINES.some((m) => m === wipForm.machine_name) ? wipForm.machine_name : (wipForm.machine_name ? '__custom__' : '')}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '__custom__') {
+                    setWipForm(prev => ({ ...prev, machine_name: '' }));
+                  } else {
+                    setWipForm(prev => ({ ...prev, machine_name: val }));
+                  }
+                }}
+                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+              >
+                <option value="">-- Chọn tổ máy CNC thực hiện --</option>
+                <optgroup label="Xưởng A - Phay Mazak & Tiện Doosan">
+                  <option value="Máy Phay CNC Mazak VCN-530C (#01)">Máy Phay CNC Mazak VCN-530C (#01)</option>
+                  <option value="Máy Phay CNC Mazak VCN-530C (#02)">Máy Phay CNC Mazak VCN-530C (#02)</option>
+                  <option value="Máy Phay CNC Mazak VCN-530C (#03)">Máy Phay CNC Mazak VCN-530C (#03)</option>
+                  <option value="Máy Tiện CNC Doosan Lynx 220 (#01)">Máy Tiện CNC Doosan Lynx 220 (#01)</option>
+                  <option value="Máy Tiện CNC Doosan Lynx 220 (#02)">Máy Tiện CNC Doosan Lynx 220 (#02)</option>
+                </optgroup>
+                <optgroup label="Xưởng B - Cắt Dây EDM & Mài Phẳng">
+                  <option value="Máy Cắt Dây CNC Sodick AQ327L (#01)">Máy Cắt Dây CNC Sodick AQ327L (#01)</option>
+                  <option value="Máy Cắt Dây CNC Sodick AQ327L (#02)">Máy Cắt Dây CNC Sodick AQ327L (#02)</option>
+                  <option value="Máy Mài Phẳng Okamoto ACC-DX (#01)">Máy Mài Phẳng Okamoto ACC-DX (#01)</option>
+                  <option value="Máy Mài Phẳng Okamoto ACC-DX (#02)">Máy Mài Phẳng Okamoto ACC-DX (#02)</option>
+                </optgroup>
+                <optgroup label="Xưởng C - Cưa Phôi, Phay Cơ & Jig">
+                  <option value="Máy Cưa Vòng Amada HFA-300 Tự Động">Máy Cưa Vòng Amada HFA-300 Tự Động</option>
+                  <option value="Máy Phay Cơ Vạn Năng Bridgeport">Máy Phay Cơ Vạn Năng Bridgeport</option>
+                  <option value="Tổ Nguội, Khử Bavia & Lắp Ráp Jig">Tổ Nguội, Khử Bavia & Lắp Ráp Jig</option>
+                </optgroup>
+                <optgroup label="KCS & Đo Lường">
+                  <option value="Máy Đo 3D CMM Mitutoyo & Bàn Map">Máy Đo 3D CMM Mitutoyo & Bàn Map</option>
+                </optgroup>
+                <option value="__custom__">✏️ Nhập tổ máy / thiết bị khác...</option>
+              </select>
+              {(!FACTORY_MACHINES.some((m) => m === wipForm.machine_name) || wipForm.machine_name === '') && (
+                <input
+                  type="text"
+                  placeholder="Gõ tên tổ máy tại đây..."
+                  value={wipForm.machine_name}
+                  onChange={(e) => setWipForm({ ...wipForm, machine_name: e.target.value })}
+                  className="w-full mt-1.5 px-3 py-1.5 text-xs rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-blue-50/20"
+                />
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
