@@ -29,7 +29,7 @@ import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import * as XLSX from 'xlsx';
 
-export default function SalesModule() {
+export default function SalesModule({ initialSubTab }) {
   const { showSuccess, showError, confirmAction, confirmDelete } = useToast();
   const [drawingFile, setDrawingFile] = useState(null);
   const { user } = useAuth();
@@ -37,7 +37,13 @@ export default function SalesModule() {
   const canManageQuotations = user?.role === 'admin' || user?.role === 'sales';
   const canManageDeliveries = user?.role === 'admin' || user?.role === 'sales' || user?.role === 'warehouse';
 
-  const [activeSubTab, setActiveSubTab] = useState('quotations'); // 'quotations' | 'orders' | 'deliveries'
+  const [activeSubTab, setActiveSubTab] = useState(initialSubTab || 'quotations');
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]); // 'quotations' | 'orders' | 'deliveries'
 
   // If accountant or warehouse, hide quotations tab
   useEffect(() => {

@@ -14,6 +14,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import api from '../../api';
+import { t } from '../../i18n';
 import Table from '../ui/Table';
 import Button from '../ui/Button';
 import ExportButton from '../ui/ExportButton';
@@ -216,7 +217,7 @@ export default function CustomersModule() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Tìm theo tên công ty, mã KH, số điện thoại, người liên hệ..."
+            placeholder={t('customers.search_placeholder', 'Tìm theo tên công ty, mã KH, số điện thoại, người liên hệ...')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs transition"
@@ -322,14 +323,14 @@ export default function CustomersModule() {
         <Modal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
-          title="Thêm Mới Khách Hàng / Doanh Nghiệp"
+          title={t('customers.add_modal_title', 'Thêm Mới Khách Hàng / Doanh Nghiệp')}
           footer={
             <>
               <Button variant="ghost" onClick={() => setIsAddModalOpen(false)}>
                 Hủy bỏ
               </Button>
               <Button variant="primary" onClick={handleCreateCustomer} icon={Plus}>
-                Lưu Khách Hàng
+                {t('customers.save_customer', 'Lưu Khách Hàng')}
               </Button>
             </>
           }

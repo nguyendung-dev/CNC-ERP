@@ -24,11 +24,17 @@ import { Input, Select } from '../ui/Input';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 
-export default function ProductionModule() {
+export default function ProductionModule({ initialSubTab }) {
   const { showSuccess, showError, confirmDelete } = useToast();
   const { user } = useAuth();
   const canManageProduction = user?.role === 'admin' || user?.role === 'production';
-  const [subTab, setSubTab] = useState('lsx'); // 'lsx' | 'wip' | 'subcontract' | 'workshops'
+  const [subTab, setSubTab] = useState(initialSubTab || 'lsx');
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setSubTab(initialSubTab);
+    }
+  }, [initialSubTab]); // 'lsx' | 'wip' | 'subcontract' | 'workshops'
   const [orders, setOrders] = useState([]);
   const [movements, setMovements] = useState([]);
   const [subcontracts, setSubcontracts] = useState([]);

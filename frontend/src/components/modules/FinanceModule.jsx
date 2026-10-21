@@ -20,9 +20,15 @@ import Modal from '../ui/Modal';
 import { Input, Select } from '../ui/Input';
 import { useToast } from '../../context/ToastContext';
 
-export default function FinanceModule() {
+export default function FinanceModule({ initialSubTab }) {
   const { showSuccess, showError, confirmDelete } = useToast();
-  const [subTab, setSubTab] = useState('advances'); // 'advances' | 'payments' | 'debts'
+  const [subTab, setSubTab] = useState(initialSubTab || 'advances');
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setSubTab(initialSubTab);
+    }
+  }, [initialSubTab]); // 'advances' | 'payments' | 'debts'
   const [advances, setAdvances] = useState([]);
   const [payments, setPayments] = useState([]);
   const [debts, setDebts] = useState([]);

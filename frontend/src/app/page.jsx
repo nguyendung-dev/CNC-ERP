@@ -38,6 +38,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import api from '../api';
+import { t } from '../i18n';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
@@ -68,7 +69,15 @@ export default function DashboardPage() {
     }
   }, [user, token, isLoading, router]);
 
-  const [activeNav, setActiveNav] = useState('home'); // 'home' | 'sales' | 'inventory' | 'production' | 'finance' | 'reports' | 'settings'
+  const [activeNav, setActiveNav] = useState('home');
+  const [activeSubNav, setActiveSubNav] = useState(null);
+
+  const handleNavChange = (id, subId) => {
+    setActiveNav(id);
+    if (subId) {
+      setActiveSubNav(subId);
+    }
+  }; // 'home' | 'sales' | 'inventory' | 'production' | 'finance' | 'reports' | 'settings'
 
   // CNC Operational Data from real MySQL
   const [pendingTasks, setPendingTasks] = useState([]);
@@ -452,14 +461,104 @@ export default function DashboardPage() {
   const allowedNavIds = (user && ROLE_NAV_PERMISSIONS[user.role]) || ['home'];
 
   const allNavItems = [
-    { id: 'home', label: 'Trang chủ', icon: Home },
-    { id: 'sales', label: 'Bán hàng', icon: ShoppingCart },
-    { id: 'customers', label: 'Khách hàng', icon: Users },
-    { id: 'inventory', label: 'Kho vật tư', icon: Package },
-    { id: 'production', label: 'Sản xuất', icon: Factory },
-    { id: 'finance', label: 'Tài chính', icon: CreditCard },
-    { id: 'reports', label: 'Báo cáo', icon: BarChart3 },
-    { id: 'settings', label: 'Phân quyền', icon: SlidersHorizontal },
+    { id: 'home', label: t('nav.home', 'Trang chủ'), icon: Home },
+    {
+      id: 'sales',
+      label: t('nav.sales', 'Bán hàng'),
+      icon: ShoppingCart,
+      subItems: [
+        {
+          id: 'quotations',
+          label: t('nav.sub_sales_quotations', 'Báo giá CNC'),
+          desc: t('nav.sub_sales_quotations_desc', 'Báo giá chi tiết gia công & giờ máy'),
+        },
+        {
+          id: 'orders',
+          label: t('nav.sub_sales_orders', 'Đơn hàng (SO)'),
+          desc: t('nav.sub_sales_orders_desc', 'Theo dõi tiến độ SO & giao hàng'),
+        },
+        {
+          id: 'deliveries',
+          label: t('nav.sub_sales_deliveries', 'Phiếu Giao Hàng'),
+          desc: t('nav.sub_sales_deliveries_desc', 'Lập & xuất kho thành phẩm'),
+        },
+      ],
+    },
+    {
+      id: 'customers',
+      label: t('nav.customers', 'Khách hàng'),
+      icon: Users,
+      subItems: [
+        {
+          id: 'list',
+          label: t('nav.sub_customers_list', 'Danh sách khách hàng'),
+          desc: t('nav.sub_customers_list_desc', 'Thông tin liên hệ & mã số thuế'),
+        },
+      ],
+    },
+    {
+      id: 'inventory',
+      label: t('nav.inventory', 'Kho vật tư'),
+      icon: Package,
+      subItems: [
+        {
+          id: 'materials',
+          label: t('nav.sub_inventory_stock', 'Tồn kho phôi & dao'),
+          desc: t('nav.sub_inventory_stock_desc', 'Quản lý phôi thép, nhôm, dao phay'),
+        },
+      ],
+    },
+    {
+      id: 'production',
+      label: t('nav.production', 'Sản xuất'),
+      icon: Factory,
+      subItems: [
+        {
+          id: 'lsx',
+          label: t('nav.sub_production_lsx', 'Lệnh Sản Xuất (LSX)'),
+          desc: t('nav.sub_production_lsx_desc', 'Điều độ máy, kế hoạch phôi & chi tiết'),
+        },
+        {
+          id: 'wip',
+          label: t('nav.sub_production_wip', 'Luân Chuyển BTP & NG'),
+          desc: t('nav.sub_production_wip_desc', 'Luân chuyển công đoạn & phế phẩm'),
+        },
+        {
+          id: 'subcontract',
+          label: t('nav.sub_production_subcontract', 'Gia Công Ngoài'),
+          desc: t('nav.sub_production_subcontract_desc', 'Gửi tiện, mạ, nhiệt luyện đối tác'),
+        },
+        {
+          id: 'workshops',
+          label: t('nav.sub_production_workshops', 'Phân Xưởng CNC'),
+          desc: t('nav.sub_production_workshops_desc', 'Quản lý danh sách xưởng & dàn máy'),
+        },
+      ],
+    },
+    {
+      id: 'finance',
+      label: t('nav.finance', 'Tài chính'),
+      icon: CreditCard,
+      subItems: [
+        {
+          id: 'advances',
+          label: t('nav.sub_finance_advances', 'Đề Nghị Tạm Ứng'),
+          desc: t('nav.sub_finance_advances_desc', 'Tạm ứng mua phôi, dao cụ & dịch vụ'),
+        },
+        {
+          id: 'payments',
+          label: t('nav.sub_finance_payments', 'Phiếu Chi & Thanh Toán'),
+          desc: t('nav.sub_finance_payments_desc', 'Thanh toán đối tác, cấn trừ tạm ứng'),
+        },
+        {
+          id: 'debts',
+          label: t('nav.sub_finance_debts', 'Dòng Tiền & Công Nợ'),
+          desc: t('nav.sub_finance_debts_desc', 'Sổ theo dõi công nợ khách hàng'),
+        },
+      ],
+    },
+    { id: 'reports', label: t('nav.reports', 'Báo cáo'), icon: BarChart3 },
+    { id: 'settings', label: t('nav.settings', 'Phân quyền'), icon: SlidersHorizontal },
   ];
 
   const navItems = allNavItems.filter((item) => allowedNavIds.includes(item.id));
@@ -496,14 +595,14 @@ export default function DashboardPage() {
           setActiveNav('home');
         }}
         onSelectModule={(module) => {
-          setActiveNav(module);
+          handleNavChange(module);
         }}
         user={user}
         logout={logout}
         roleLabels={ROLE_LABELS}
         navItems={navItems}
         activeNav={activeNav}
-        onNavChange={(id) => setActiveNav(id)}
+        onNavChange={(id) => handleNavChange(id)}
       />
 
       {/* 2. Main Body with Sidebar + Content */}
@@ -512,7 +611,8 @@ export default function DashboardPage() {
         <Sidebar
           items={navItems}
           activeNav={activeNav}
-          onNavChange={(id) => setActiveNav(id)}
+          activeSubNav={activeSubNav}
+          onNavChange={handleNavChange}
           widthClass="w-24 md:w-28"
           showSeparatorAfterFirst={true}
         />
@@ -541,11 +641,11 @@ export default function DashboardPage() {
           )}
 
           {/* Module Views (Guarded by permission) */}
-          {activeNav === 'sales' && <SalesModule />}
+          {activeNav === 'sales' && <SalesModule initialSubTab={activeSubNav} />}
           {activeNav === 'customers' && <CustomersModule />}
           {activeNav === 'inventory' && <InventoryModule />}
-          {activeNav === 'production' && <ProductionModule />}
-          {activeNav === 'finance' && <FinanceModule />}
+          {activeNav === 'production' && <ProductionModule initialSubTab={activeSubNav} />}
+          {activeNav === 'finance' && <FinanceModule initialSubTab={activeSubNav} />}
           {activeNav === 'reports' && <ReportsModule />}
 
           {/* Settings / RBAC View with Integrated User Registration & User Accounts Table */}

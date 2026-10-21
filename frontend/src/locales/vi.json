@@ -78,7 +78,32 @@
     "production": "Sản xuất",
     "finance": "Tài chính",
     "reports": "Báo cáo",
-    "settings": "Phân quyền"
+    "settings": "Phân quyền",
+    "customers": "Khách hàng",
+    "sub_sales_quotations": "Báo giá CNC",
+    "sub_sales_quotations_desc": "Báo giá chi tiết gia công & giờ máy",
+    "sub_sales_orders": "Đơn hàng (SO)",
+    "sub_sales_orders_desc": "Theo dõi tiến độ SO & giao hàng",
+    "sub_sales_deliveries": "Phiếu Giao Hàng",
+    "sub_sales_deliveries_desc": "Lập & xuất kho thành phẩm",
+    "sub_customers_list": "Danh sách khách hàng",
+    "sub_customers_list_desc": "Thông tin liên hệ & mã số thuế",
+    "sub_inventory_stock": "Tồn kho phôi & dao",
+    "sub_inventory_stock_desc": "Quản lý phôi thép, nhôm, dao phay",
+    "sub_production_lsx": "Lệnh Sản Xuất (LSX)",
+    "sub_production_lsx_desc": "Điều độ máy, kế hoạch phôi & chi tiết",
+    "sub_production_wip": "Luân Chuyển BTP & NG",
+    "sub_production_wip_desc": "Luân chuyển công đoạn & phế phẩm",
+    "sub_production_subcontract": "Gia Công Ngoài",
+    "sub_production_subcontract_desc": "Gửi tiện, mạ, nhiệt luyện đối tác",
+    "sub_production_workshops": "Phân Xưởng CNC",
+    "sub_production_workshops_desc": "Quản lý danh sách xưởng & dàn máy",
+    "sub_finance_advances": "Đề Nghị Tạm Ứng",
+    "sub_finance_advances_desc": "Tạm ứng mua phôi, dao cụ & dịch vụ",
+    "sub_finance_payments": "Phiếu Chi & Thanh Toán",
+    "sub_finance_payments_desc": "Thanh toán đối tác, cấn trừ tạm ứng",
+    "sub_finance_debts": "Dòng Tiền & Công Nợ",
+    "sub_finance_debts_desc": "Sổ theo dõi công nợ khách hàng"
   },
   "page_titles": {
     "home": "Trang chủ",
@@ -87,7 +112,8 @@
     "production": "Quản lý Sản Xuất & Điều Độ Máy",
     "finance": "Quản lý Tài Chính & Dòng Tiền",
     "reports": "Báo Cáo & Phân Tích Quản Trị",
-    "settings": "Phân Quyền Vai Trò Người Dùng (RBAC)"
+    "settings": "Phân Quyền Vai Trò Người Dùng (RBAC)",
+    "customers": "Quản Lý Danh Mục Khách Hàng & Đối Tác"
   },
   "notifications": {
     "title": "Thông báo xưởng",
@@ -156,7 +182,10 @@
     "sub_part_name": "Tên chi tiết gửi ngoài",
     "send_qty": "Số lượng gửi",
     "unit_cost": "Đơn giá gia công ngoài (VNĐ/cái)",
-    "submit_sub": "Gửi Gia Công"
+    "submit_sub": "Gửi Gia Công",
+    "tab_workshops": "Phân Xưởng CNC",
+    "workshops_title": "Quản lý Phân xưởng CNC",
+    "add_workshop": "Thêm phân xưởng mới"
   },
   "sales": {
     "tab_quotations": "Báo giá CNC",
@@ -262,5 +291,35 @@
     "edit_reset_pw_placeholder": "Nhập mật khẩu mới (tối thiểu 6 ký tự)",
     "edit_reset_pw_hint": "💡 Quản trị viên nhập mật khẩu mới tại đây để cấp lại cho nhân viên khi quên mật khẩu.",
     "save_user_btn": "Lưu Thay Đổi"
+  },
+  "customers": {
+    "title": "Quản Lý Khách Hàng & Đối Tác",
+    "subtitle": "Danh bạ khách hàng cơ khí, thông tin liên hệ và mã số thuế",
+    "add_customer": "Thêm khách hàng",
+    "search_placeholder": "Tìm kiếm theo tên công ty, mã KH, SĐT...",
+    "col_code": "Mã KH",
+    "col_name": "Doanh nghiệp / Khách hàng",
+    "col_contact": "Người liên hệ & SĐT",
+    "col_email_tax": "Email & Mã số thuế",
+    "col_status": "Trạng thái",
+    "col_created": "Ngày tạo",
+    "col_action": "Thao tác",
+    "add_modal_title": "Thêm Khách Hàng / Đối Tác Mới",
+    "edit_modal_title": "Chỉnh Sửa Thông Tin Khách Hàng",
+    "name_label": "Tên Doanh nghiệp / Khách hàng",
+    "name_placeholder": "VD: Công ty TNHH Cơ khí Sakura",
+    "contact_label": "Người đại diện liên hệ",
+    "contact_placeholder": "VD: Anh Nguyễn Văn A (Phòng Mua hàng)",
+    "phone_label": "Số điện thoại liên hệ",
+    "phone_placeholder": "VD: 0912 345 678",
+    "email_label": "Email",
+    "email_placeholder": "VD: contact@sakura.vn",
+    "tax_label": "Mã số thuế",
+    "tax_placeholder": "VD: 0101234567",
+    "address_label": "Địa chỉ trụ sở / Xưởng giao hàng",
+    "address_placeholder": "VD: Lô CN-05, KCN Quang Minh, Hà Nội",
+    "notes_label": "Ghi chú bổ sung",
+    "notes_placeholder": "Nhập ghi chú yêu cầu giao hàng, công nợ...",
+    "save_customer": "Lưu Khách Hàng"
   }
 }
