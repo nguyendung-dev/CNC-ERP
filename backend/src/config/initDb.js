@@ -150,6 +150,7 @@ async function initializeDatabase() {
         ng_qty INT DEFAULT 0,
         routing TEXT,
         current_step VARCHAR(100) DEFAULT 'Cắt phôi',
+        workshop_name VARCHAR(150) NULL DEFAULT 'Xưởng A (Phay Mazak, Tiện Doosan)',
         status VARCHAR(50) DEFAULT 'running',
         start_date DATE,
         end_date DATE,

@@ -15,24 +15,24 @@ class ProductionRepository {
   async createProductionOrder(data) {
     const {
       code, so_id, part_name, drawing_code, target_qty, routing,
-      current_step, status, start_date, end_date
+      current_step, workshop_name, status, start_date, end_date
     } = data;
 
     const routingStr = typeof routing === 'object' ? JSON.stringify(routing) : routing;
 
     const [result] = await pool.query(
-      `INSERT INTO production_orders (code, so_id, part_name, drawing_code, target_qty, completed_qty, ng_qty, routing, current_step, status, start_date, end_date)
+      `INSERT INTO production_orders (code, so_id, part_name, drawing_code, target_qty, completed_qty, ng_qty, routing, current_step, workshop_name, status, start_date, end_date)
        VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?)`,
       [
         code, so_id || null, part_name, drawing_code || '', target_qty,
-        routingStr || '[]', current_step || 'Cắt phôi', status || 'running',
+        routingStr || '[]', current_step || 'Cắt phôi', workshop_name || 'Xưởng A (Phay Mazak, Tiện Doosan)', status || 'running',
         start_date || null, end_date || null
       ]
     );
     return this.getProductionOrderById(result.insertId);
   }
 
-  async updateProductionStep(id, { current_step, completed_qty, ng_qty, status }) {
+  async updateProductionStep(id, { current_step, workshop_name, completed_qty, ng_qty, status }) {
     const updates = [];
     const params = [];
 

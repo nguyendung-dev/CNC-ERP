@@ -85,6 +85,11 @@ export default function ProductionModule({ initialSubTab }) {
   const [isLsxModalOpen, setIsLsxModalOpen] = useState(false);
   const [isWipModalOpen, setIsWipModalOpen] = useState(false);
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
+  const [isHandoverModalOpen, setIsHandoverModalOpen] = useState(false);
+  const [selectedHandoverLsx, setSelectedHandoverLsx] = useState(null);
+  const [handoverQty, setHandoverQty] = useState(1);
+  const [handoverInspector, setHandoverInspector] = useState('');
+  const [handoverNote, setHandoverNote] = useState('Đã đo kiểm kích thước dung sai đạt chuẩn kỹ thuật 100%');
 
   // Forms
   const [lsxForm, setLsxForm] = useState({
@@ -94,6 +99,7 @@ export default function ProductionModule({ initialSubTab }) {
     drawing_code: '',
     target_qty: 50,
     current_step: 'Cắt phôi',
+    workshop_name: 'Xưởng A (Phay Mazak, Tiện Doosan)',
   });
 
   const [wipForm, setWipForm] = useState({
@@ -360,23 +366,29 @@ export default function ProductionModule({ initialSubTab }) {
     }
   };
 
-  const handleHandoverLsx = (lsx) => {
+  const handleOpenHandover = (lsx) => {
+    setSelectedHandoverLsx(lsx);
     const remain = Math.max(1, (Number(lsx.target_qty) || 0) - (Number(lsx.completed_qty) || 0));
-    confirmDelete({
-      title: 'QC Nghiệm Thu & Bàn Giao Thành Phẩm',
-      itemName: lsx.code + ' (' + lsx.part_name + ')',
-      message: 'Bộ phận Sản xuất & QC xác nhận đã hoàn thành ' + remain + ' chi tiết đạt chuẩn kỹ thuật và bàn giao nhập kho thành phẩm cho Đơn hàng SO?',
-      confirmText: 'Bàn giao nhập kho',
-      onConfirm: async () => {
-        try {
-          await api.post('/production/orders/' + lsx.id + '/handover-finished', { qty: remain });
-          showSuccess('Bàn giao thành phẩm thành công!', 'Đã nhập kho thành phẩm ' + remain + ' chi tiết. Thủ kho và Sales hiện đã có thể làm thủ tục xuất hàng.');
-          loadData();
-        } catch (err) {
-          showError('Lỗi bàn giao', err.response?.data?.message || err.message);
-        }
-      },
-    });
+    setHandoverQty(remain);
+    setHandoverInspector(user?.full_name || 'Kỹ sư QC');
+    setHandoverNote('Đã đo kiểm tra kích thước dung sai đạt chuẩn kỹ thuật 100%');
+    setIsHandoverModalOpen(true);
+  };
+
+  const handleSubmitHandover = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedHandoverLsx) return;
+    try {
+      await api.post(`/production/orders/${selectedHandoverLsx.id}/handover-finished`, { qty: handoverQty });
+      showSuccess(
+        'Bàn giao thành phẩm thành công!',
+        `Đã hoàn tất nghiệm thu & bàn giao ${handoverQty} chi tiết ${selectedHandoverLsx.part_name} vào kho thành phẩm.`
+      );
+      setIsHandoverModalOpen(false);
+      loadData();
+    } catch (err) {
+      showError('Lỗi bàn giao', err.response?.data?.message || err.message);
+    }
   };
 
   const handleDeleteLsx = (lsxId) => {
@@ -520,7 +532,20 @@ export default function ProductionModule({ initialSubTab }) {
           data={orders}
           columns={[
             { header: 'Mã LSX', accessor: 'code', cellClassName: 'font-mono font-medium text-blue-600' },
-            { header: 'Chi tiết gia công', accessor: 'part_name' },
+            {
+              header: 'Chi tiết gia công & Phân xưởng',
+              render: (row) => (
+                <div>
+                  <div className="font-bold text-slate-800">{row.part_name}</div>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded border border-blue-100">
+                      <Building2 className="w-3 h-3 text-blue-500 shrink-0" />
+                      {row.workshop_name || 'Xưởng A (Phay Mazak, Tiện Doosan)'}
+                    </span>
+                  </div>
+                </div>
+              ),
+            },
             { header: 'Mã bản vẽ', accessor: 'drawing_code', cellClassName: 'font-mono' },
             { header: 'Kế hoạch', accessor: 'target_qty', cellClassName: 'font-bold' },
             {
@@ -593,7 +618,7 @@ export default function ProductionModule({ initialSubTab }) {
                         size="sm"
                         variant="secondary"
                         icon={CheckCircle2}
-                        onClick={() => handleHandoverLsx(row)}
+                        onClick={() => handleOpenHandover(row)}
                         className="text-xs py-1 px-2 border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
                         title="Nghiệm thu QC đạt và bàn giao thành phẩm nhập kho"
                       >
@@ -887,6 +912,16 @@ export default function ProductionModule({ initialSubTab }) {
               value: s.value,
               label: s.label,
             }))}
+          />
+          <Select
+            label="Phân xưởng CNC tiếp nhận lệnh gia công"
+            value={lsxForm.workshop_name}
+            onChange={(e) => setLsxForm({ ...lsxForm, workshop_name: e.target.value })}
+            options={workshops.map((w) => ({
+              value: `${w.code} - ${w.name}`,
+              label: `${w.code} - ${w.name} (${w.manager_name || 'Quản đốc'} - ${w.machine_count || 1} máy CNC)`,
+            }))}
+            required
           />
         </form>
       </Modal>
@@ -1260,6 +1295,71 @@ export default function ProductionModule({ initialSubTab }) {
               value={workshopForm.description}
               onChange={(e) => setWorkshopForm({ ...workshopForm, description: e.target.value })}
             />
+          </form>
+        </Modal>
+      )}
+
+      {/* Handover Finished Goods Modal */}
+      {isHandoverModalOpen && selectedHandoverLsx && (
+        <Modal
+          isOpen={isHandoverModalOpen}
+          onClose={() => setIsHandoverModalOpen(false)}
+          title="QC Nghiệm Thu & Bàn Giao Thành Phẩm Nhập Kho"
+          maxWidth="max-w-lg"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setIsHandoverModalOpen(false)}>Hủy</Button>
+              <Button
+                variant="primary"
+                onClick={handleSubmitHandover}
+                icon={CheckCircle2}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              >
+                Xác Nhận Bàn Giao Nhập Kho
+              </Button>
+            </>
+          }
+        >
+          <form className="space-y-4" onSubmit={handleSubmitHandover}>
+            <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3.5 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-mono font-bold text-emerald-800 text-sm">{selectedHandoverLsx.code}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">
+                  Tiến độ: {selectedHandoverLsx.completed_qty}/{selectedHandoverLsx.target_qty}
+                </span>
+              </div>
+              <div className="font-bold text-slate-800 text-sm">{selectedHandoverLsx.part_name}</div>
+              <div className="text-xs text-slate-500">Mã bản vẽ: <span className="font-mono font-medium">{selectedHandoverLsx.drawing_code || 'N/A'}</span></div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Số lượng hoàn thành bàn giao"
+                type="number"
+                min="1"
+                max={Math.max(1, Number(selectedHandoverLsx.target_qty) - Number(selectedHandoverLsx.completed_qty))}
+                value={handoverQty}
+                onChange={(e) => setHandoverQty(Number(e.target.value))}
+                required
+              />
+              <Input
+                label="Kỹ sư QC / Người phụ trách nghiệm thu"
+                value={handoverInspector}
+                onChange={(e) => setHandoverInspector(e.target.value)}
+                required
+              />
+            </div>
+
+            <Input
+              label="Ghi chú nghiệm thu chất lượng kỹ thuật"
+              placeholder="VD: Kích thước kiểm tra đạt 100%, độ nhám Ra đạt chuẩn..."
+              value={handoverNote}
+              onChange={(e) => setHandoverNote(e.target.value)}
+            />
+
+            <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 leading-relaxed">
+              ✨ <strong>Lưu ý:</strong> Khi xác nhận, số lượng chi tiết đạt chuẩn sẽ được chuyển giao vào Kho Thành Phẩm. Thủ kho và bộ phận Bán hàng có thể lập Phiếu Giao Hàng (Delivery Note) để xuất giao cho đơn hàng SO.
+            </div>
           </form>
         </Modal>
       )}
