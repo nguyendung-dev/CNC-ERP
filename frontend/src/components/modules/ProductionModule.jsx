@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import api from '../../api';
 import Table from '../ui/Table';
+import CurrencyInput from '../ui/CurrencyInput';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
@@ -707,11 +708,10 @@ export default function ProductionModule() {
               onChange={(e) => setSubForm({ ...subForm, send_qty: Number(e.target.value) })}
               required
             />
-            <Input
+            <CurrencyInput
               label="Đơn giá gia công ngoài (VNĐ/cái)"
-              type="number"
               value={subForm.unit_cost}
-              onChange={(e) => setSubForm({ ...subForm, unit_cost: Number(e.target.value) })}
+              onChange={(val) => setSubForm({ ...subForm, unit_cost: val })}
             />
           </div>
 

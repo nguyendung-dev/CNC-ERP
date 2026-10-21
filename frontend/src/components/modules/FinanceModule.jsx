@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import api from '../../api';
 import Table from '../ui/Table';
+import CurrencyInput from '../ui/CurrencyInput';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
@@ -31,6 +32,9 @@ export default function FinanceModule() {
   const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [payingDebt, setPayingDebt] = useState(null);
+  const [payAmount, setPayAmount] = useState(0);
 
   // Forms
   const [advanceForm, setAdvanceForm] = useState({
@@ -442,7 +446,7 @@ export default function FinanceModule() {
               render: (row) => (
                 <div className="flex items-center gap-1.5">
                   {row.remaining_amount > 0 ? (
-                    <Button size="sm" variant="secondary" onClick={() => handlePayDebt(row.id)}>
+                    <Button size="sm" variant="secondary" onClick={() => openPayModal(row)}>
                       Ghi nhận trả
                     </Button>
                   ) : (
@@ -630,6 +634,39 @@ export default function FinanceModule() {
               />
             </div>
           </form>
+        </Modal>
+      )}
+      {/* Pay Debt Modal */}
+      {isPayModalOpen && payingDebt && (
+        <Modal
+          isOpen={isPayModalOpen}
+          onClose={() => setIsPayModalOpen(false)}
+          title={"Ghi Nhận Thu / Trả Nợ: " + payingDebt.partner_name}
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setIsPayModalOpen(false)}>
+                Hủy bỏ
+              </Button>
+              <Button variant="primary" onClick={handleConfirmPayDebt} icon={DollarSign}>
+                Xác Nhận Thanh Toán
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs space-y-1">
+              <p><strong className="text-slate-700">Đối tác:</strong> {payingDebt.partner_name}</p>
+              <p><strong className="text-slate-700">Phân loại:</strong> {payingDebt.type === 'receivable' ? 'Phải thu (Khách nợ)' : 'Phải trả (Nợ nhà cung cấp)'}</p>
+              <p><strong className="text-slate-700">Còn lại cần thanh toán:</strong> <span className="text-rose-600 font-bold">{Number(payingDebt.remaining_amount).toLocaleString()} VNĐ</span></p>
+            </div>
+
+            <CurrencyInput
+              label="Số tiền thực tế thanh toán đợt này"
+              value={payAmount}
+              onChange={(val) => setPayAmount(val)}
+              required
+            />
+          </div>
         </Modal>
       )}
     </div>

@@ -10,10 +10,13 @@ import {
   CheckCircle2, 
   DollarSign, 
   Calculator,
-  Trash2
+  Trash2,
+  Upload,
+  Paperclip
 } from 'lucide-react';
 import api from '../../api';
 import Table from '../ui/Table';
+import CurrencyInput from '../ui/CurrencyInput';
 import Badge, { STATUS_LABELS } from '../ui/Badge';
 import Button from '../ui/Button';
 import ExportButton from '../ui/ExportButton';
@@ -24,7 +27,8 @@ import { useAuth } from '../../context/AuthContext';
 import * as XLSX from 'xlsx';
 
 export default function SalesModule() {
-  const { showSuccess, showError, confirmDelete } = useToast();
+  const { showSuccess, showError, confirmAction, confirmDelete } = useToast();
+  const [drawingFile, setDrawingFile] = useState(null);
   const { user } = useAuth();
 
   const canManageQuotations = user?.role === 'admin' || user?.role === 'sales';
@@ -128,16 +132,21 @@ export default function SalesModule() {
     }
   };
 
-  const handleConvertToSO = (quotationId) => {
-    confirmDelete({
+  const handleConvertToSO = (quotation) => {
+    const qId = typeof quotation === 'object' ? quotation.id : quotation;
+    const qCode = typeof quotation === 'object' ? quotation.code : 'BG #' + qId;
+
+    confirmAction({
+      type: 'primary',
       title: 'Chuyển Đổi Sang Đơn Hàng (SO)',
-      message: 'Bạn có chắc chắn muốn duyệt và chuyển Báo giá này thành Đơn đặt hàng (SO) chính thức không?',
+      message: 'Bạn có chắc chắn muốn duyệt và chuyển Báo giá "' + qCode + '" thành Đơn đặt hàng (SO) chính thức không?',
+      itemName: qCode,
       confirmText: 'Chuyển thành SO',
       cancelText: 'Hủy bỏ',
       onConfirm: async () => {
         try {
-          await api.post('/sales/quotations/' + quotationId + '/convert-to-so');
-          showSuccess('Chuyển đổi thành công!', 'Báo giá đã được phê duyệt và tạo Đơn đặt hàng (SO).');
+          await api.post('/sales/quotations/' + qId + '/convert-to-so');
+          showSuccess('Chuyển đổi thành công!', 'Báo giá ' + qCode + ' đã được phê duyệt và tạo Đơn đặt hàng (SO) chính thức.', { itemName: qCode });
           loadData();
           setActiveSubTab('orders');
         } catch (err) {
@@ -426,7 +435,7 @@ export default function SalesModule() {
                 <div className="flex items-center gap-1.5">
                   {row.status !== 'converted_to_so' ? (
                     <Button
-                      onClick={() => handleConvertToSO(row.id)}
+                      onClick={() => handleConvertToSO(row)}
                       size="sm"
                       variant="secondary"
                       icon={ArrowRight}

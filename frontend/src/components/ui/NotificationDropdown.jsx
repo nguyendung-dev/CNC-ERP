@@ -88,7 +88,7 @@ export default function NotificationDropdown({ onSelectModule }) {
       // 3. Báo giá CNC chờ phê duyệt (MySQL: quotations table status = pending)
       if (quotesRes.status === 'fulfilled' && Array.isArray(quotesRes.value?.data)) {
         quotesRes.value.data
-          .filter((q) => q.status === 'pending')
+          .filter((q) => q.status === 'draft' || q.status === 'pending')
           .forEach((q) => {
             items.push({
               id: `quote-${q.id}`,

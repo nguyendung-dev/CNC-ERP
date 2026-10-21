@@ -7,24 +7,23 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
-// Finance is restricted to accountant and admin
-router.use(authorizeRoles('accountant'));
-
-// Advances (Tạm ứng)
+// Advances (Tạm ứng):
+// All staff can read advances and submit advance requests
 router.get('/advances', financeController.getAdvances);
 router.post('/advances', validateBody(['requester', 'purpose', 'amount']), financeController.createAdvance);
+// Only Admin can approve or delete advances
 router.patch('/advances/:id/approve', authorizeRoles('admin'), financeController.approveAdvance);
 router.delete('/advances/:id', authorizeRoles('admin'), financeController.deleteAdvance);
 
-// Payments (Thanh toán)
-router.get('/payments', financeController.getPayments);
-router.post('/payments', validateBody(['recipient', 'category', 'gross_amount']), financeController.createPayment);
+// Payments (Thanh toán): Restricted to accountant & admin
+router.get('/payments', authorizeRoles('accountant'), financeController.getPayments);
+router.post('/payments', authorizeRoles('accountant'), validateBody(['recipient', 'category', 'gross_amount']), financeController.createPayment);
 router.delete('/payments/:id', authorizeRoles('admin'), financeController.deletePayment);
 
-// Debts (Công nợ)
-router.get('/debts', financeController.getDebts);
-router.post('/debts', validateBody(['partner_name', 'type', 'total_amount']), financeController.createDebt);
-router.post('/debts/:id/pay', validateBody(['amount']), financeController.payDebt);
+// Debts (Công nợ): Restricted to accountant & admin
+router.get('/debts', authorizeRoles('accountant'), financeController.getDebts);
+router.post('/debts', authorizeRoles('accountant'), validateBody(['partner_name', 'type', 'total_amount']), financeController.createDebt);
+router.post('/debts/:id/pay', authorizeRoles('accountant'), validateBody(['amount']), financeController.payDebt);
 router.delete('/debts/:id', authorizeRoles('admin'), financeController.deleteDebt);
 
 module.exports = router;

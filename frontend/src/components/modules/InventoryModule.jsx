@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import api from '../../api';
 import Table from '../ui/Table';
+import CurrencyInput from '../ui/CurrencyInput';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import ExportButton from '../ui/ExportButton';
@@ -470,12 +471,11 @@ export default function InventoryModule() {
               value={form.min_stock}
               onChange={(e) => setForm({ ...form, min_stock: Number(e.target.value) })}
             />
-            <Input
-              label="Đơn giá nhập (VNĐ)"
-              type="number"
-              value={form.unit_price}
-              onChange={(e) => setForm({ ...form, unit_price: Number(e.target.value) })}
-            />
+            <CurrencyInput
+                label="Đơn giá nhập"
+                value={form.unit_price}
+                onChange={(val) => setForm({ ...form, unit_price: val })}
+              />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -608,11 +608,10 @@ export default function InventoryModule() {
                 value={editForm.min_stock}
                 onChange={(e) => setEditForm({ ...editForm, min_stock: Number(e.target.value) })}
               />
-              <Input
-                label="Đơn giá kho (VNĐ)"
-                type="number"
+              <CurrencyInput
+                label="Đơn giá kho"
                 value={editForm.unit_price}
-                onChange={(e) => setEditForm({ ...editForm, unit_price: Number(e.target.value) })}
+                onChange={(val) => setEditForm({ ...editForm, unit_price: val })}
               />
             </div>
 

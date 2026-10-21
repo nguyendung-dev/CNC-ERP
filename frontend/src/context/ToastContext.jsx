@@ -4,7 +4,7 @@ import { t } from '../i18n';
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, X, AlertTriangle, Info, Trash2, CheckCircle2 } from 'lucide-react';
+import { Check, X, AlertTriangle, Info, Trash2, CheckCircle2, ArrowRightLeft } from 'lucide-react';
 
 const ToastContext = createContext(null);
 
@@ -13,6 +13,7 @@ export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
+    type: 'danger', // 'danger' | 'primary'
     title: t('toast.confirm_delete_title', 'Xác Nhận Xóa Dữ Liệu'),
     message: '',
     itemName: '',
@@ -76,9 +77,8 @@ export function ToastProvider({ children }) {
   };
 
   const showSuccess = useCallback((title, message, options = {}) => {
-    showToast({ type: 'success', title: title || t('common.success', 'Thành công'), message, duration: 5000 });
-    
-    // Always trigger the Center Success Popup Modal so user cannot miss it!
+    // When Center Success Popup Modal is active, DO NOT show the top-right green toast
+    // (As requested: "có popup hiện rồi thì xóa cái này đi nhé")
     if (options.modal !== false) {
       setSuccessModal({
         isOpen: true,
@@ -87,6 +87,8 @@ export function ToastProvider({ children }) {
         itemName: options.itemName || '',
         onClose: options.onClose || null,
       });
+    } else {
+      showToast({ type: 'success', title: title || t('common.success', 'Thành công'), message, duration: 4000 });
     }
   }, [showToast]);
 
@@ -98,6 +100,22 @@ export function ToastProvider({ children }) {
     showToast({ type: 'info', title: title || t('common.info', 'Thông báo'), message });
   }, [showToast]);
 
+  // Generic Non-destructive Confirmation Action (e.g. Convert to SO, Approve)
+  const confirmAction = useCallback((opts = {}) => {
+    setConfirmModal({
+      isOpen: true,
+      type: opts.type || 'primary',
+      title: opts.title || 'Xác Nhận Thao Tác',
+      message: opts.message || 'Bạn có chắc chắn muốn thực hiện thao tác này không?',
+      itemName: opts.itemName || '',
+      confirmText: opts.confirmText || 'Xác nhận thực hiện',
+      cancelText: opts.cancelText || 'Hủy bỏ',
+      onConfirm: opts.onConfirm,
+      loading: false,
+    });
+  }, []);
+
+  // Danger/Destructive Delete Confirmation
   const confirmDelete = useCallback((arg1, arg2) => {
     let opts = {};
     if (typeof arg1 === 'string') {
@@ -111,6 +129,7 @@ export function ToastProvider({ children }) {
 
     setConfirmModal({
       isOpen: true,
+      type: 'danger',
       title: opts.title || t('toast.confirm_delete_title', 'Xác Nhận Xóa Dữ Liệu'),
       message: opts.message || `Bạn có chắc chắn muốn xóa "${opts.itemName || 'mục này'}" khỏi hệ thống không?`,
       itemName: opts.itemName || '',
@@ -132,7 +151,7 @@ export function ToastProvider({ children }) {
       await confirmModal.onConfirm();
       closeConfirmModal();
     } catch (err) {
-      showError('Lỗi thực hiện', err.message || 'Không thể xóa dữ liệu');
+      showError('Lỗi thực hiện', err.message || 'Không thể thực hiện thao tác');
       setConfirmModal((prev) => ({ ...prev, loading: false }));
     }
   };
@@ -145,6 +164,7 @@ export function ToastProvider({ children }) {
         showSuccessModal,
         showError,
         showInfo,
+        confirmAction,
         confirmDelete,
       }}
     >
@@ -154,7 +174,7 @@ export function ToastProvider({ children }) {
       {mounted &&
         createPortal(
           <>
-            {/* 1. TOAST NOTIFICATIONS CONTAINER (Top-Right) */}
+            {/* 1. TOAST NOTIFICATIONS CONTAINER (Top-Right, for errors and info) */}
             <div className="fixed top-5 right-5 z-[999999] flex flex-col gap-3 pointer-events-none max-w-sm sm:max-w-md w-full">
               {toasts.map((toast) => (
                 <div
@@ -211,7 +231,7 @@ export function ToastProvider({ children }) {
               ))}
             </div>
 
-            {/* 2. CONFIRM DELETE MODAL DIALOG (Small, compact layout) */}
+            {/* 2. CONFIRM ACTION / DELETE MODAL DIALOG */}
             {confirmModal.isOpen && (
               <div className="fixed inset-0 z-[999998] flex items-center justify-center p-4">
                 {/* Full-screen Edge-to-Edge Backdrop */}
@@ -226,8 +246,18 @@ export function ToastProvider({ children }) {
                   className="relative z-10 bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150"
                 >
                   <div className="flex items-start gap-3.5">
-                    <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                      <Trash2 className="w-5 h-5" />
+                    <div
+                      className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                        confirmModal.type === 'primary'
+                          ? 'bg-blue-100 text-blue-600'
+                          : 'bg-rose-100 text-rose-600'
+                      }`}
+                    >
+                      {confirmModal.type === 'primary' ? (
+                        <ArrowRightLeft className="w-5 h-5 stroke-[2.2]" />
+                      ) : (
+                        <Trash2 className="w-5 h-5" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-base font-bold text-slate-900">
@@ -244,10 +274,12 @@ export function ToastProvider({ children }) {
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200 flex items-center gap-1.5">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>Hành động này sẽ xóa dữ liệu vĩnh viễn khỏi MySQL và không thể hoàn tác!</span>
-                  </p>
+                  {confirmModal.type === 'danger' && (
+                    <p className="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200 flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Hành động này sẽ xóa dữ liệu vĩnh viễn khỏi MySQL và không thể hoàn tác!</span>
+                    </p>
+                  )}
 
                   <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
                     <button
@@ -262,13 +294,21 @@ export function ToastProvider({ children }) {
                       type="button"
                       onClick={handleConfirmAction}
                       disabled={confirmModal.loading}
-                      className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 active:scale-98 rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className={`px-4 py-2 text-xs font-bold text-white active:scale-98 rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ${
+                        confirmModal.type === 'primary'
+                          ? 'bg-blue-600 hover:bg-blue-700'
+                          : 'bg-rose-600 hover:bg-rose-700'
+                      }`}
                     >
                       {confirmModal.loading ? (
                         <span>Đang xử lý...</span>
                       ) : (
                         <>
-                          <Trash2 className="w-3.5 h-3.5" />
+                          {confirmModal.type === 'primary' ? (
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
                           <span>{confirmModal.confirmText}</span>
                         </>
                       )}
