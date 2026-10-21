@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Lock, 
@@ -18,7 +18,13 @@ import { useAuth, QUICK_ACCOUNTS } from '../../context/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, register, quickLogin } = useAuth();
+  const { user, token, isLoading, login, register, quickLogin } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && user && token) {
+      router.replace('/');
+    }
+  }, [user, token, isLoading, router]);
 
   const [mode, setMode] = useState('login'); // 'login' | 'register'
   const [loading, setLoading] = useState(false);
@@ -29,8 +35,8 @@ export default function LoginPage() {
 
   // Form states
   const [loginForm, setLoginForm] = useState({
-    identifier: 'admin@cnc.com',
-    password: '123456',
+    identifier: '',
+    password: '',
   });
 
   const [registerForm, setRegisterForm] = useState({

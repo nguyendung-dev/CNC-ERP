@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   LayoutGrid, 
   Home, 
@@ -50,7 +51,15 @@ import FinanceModule from '../components/modules/FinanceModule';
 import ReportsModule from '../components/modules/ReportsModule';
 
 export default function DashboardPage() {
-  const { user, logout, ROLE_LABELS } = useAuth();
+  const { user, token, isLoading, logout, ROLE_LABELS } = useAuth();
+  const router = useRouter();
+
+  // Authentication Guard: require login before entering dashboard
+  useEffect(() => {
+    if (!isLoading && (!user || !token)) {
+      router.replace('/login');
+    }
+  }, [user, token, isLoading, router]);
 
   const [activeNav, setActiveNav] = useState('home'); // 'home' | 'sales' | 'inventory' | 'production' | 'finance' | 'reports' | 'settings'
 
@@ -165,8 +174,10 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (user && token) {
+      loadData();
+    }
+  }, [user, token]);
 
   const handleApprove = async (task) => {
     if (task.actionType === 'advance') {
@@ -322,6 +333,15 @@ export default function DashboardPage() {
     reports: 'Báo Cáo & Phân Tích Quản Trị',
     settings: 'Phân Quyền Vai Trò Người Dùng (RBAC)',
   };
+
+  if (isLoading || !user || !token) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center gap-3 text-slate-300">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm font-medium">Đang kiểm tra quyền truy cập hệ thống...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f3f4f8] flex flex-col font-sans text-slate-800">

@@ -26,33 +26,40 @@ export function AuthProvider({ children }) {
   const [token, setTokenState] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check persisted user on mount
+  // Validate persisted auth against real backend /auth/me on mount
   useEffect(() => {
-    try {
-      const storedToken = getToken();
-      const storedUser = localStorage.getItem('cnc_erp_user');
-      const isLoggedOut = localStorage.getItem('cnc_erp_logged_out');
+    const verifyAuth = async () => {
+      try {
+        const storedToken = getToken();
+        if (!storedToken) {
+          setUser(null);
+          setTokenState(null);
+          setIsLoading(false);
+          return;
+        }
 
-      if (storedToken && storedUser) {
-        setTokenState(storedToken);
-        setUser(JSON.parse(storedUser));
-      } else if (!isLoggedOut && !storedUser) {
-        // Default to demo admin for frictionless first visit if not logged out
-        const defaultAdmin = {
-          id: 1,
-          username: 'admin',
-          email: 'admin@cnc.com',
-          full_name: 'Nguyễn Văn Quản Trị',
-          role: 'admin',
-        };
-        setUser(defaultAdmin);
-        localStorage.setItem('cnc_erp_user', JSON.stringify(defaultAdmin));
+        // Verify with real MySQL backend
+        setToken(storedToken);
+        const res = await api.get('/auth/me');
+        if (res && res.data) {
+          setUser(res.data);
+          setTokenState(storedToken);
+          localStorage.setItem('cnc_erp_user', JSON.stringify(res.data));
+        } else {
+          throw new Error('Invalid user session');
+        }
+      } catch (err) {
+        // Token expired or invalid: reset completely
+        clearToken();
+        localStorage.removeItem('cnc_erp_user');
+        setUser(null);
+        setTokenState(null);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (e) {
-      console.error('Failed to load auth state:', e);
-    } finally {
-      setIsLoading(false);
-    }
+    };
+
+    verifyAuth();
   }, []);
 
   const login = async (loginIdentifier, password) => {
@@ -68,7 +75,6 @@ export function AuthProvider({ children }) {
       setTokenState(userToken);
       setToken(userToken);
       localStorage.setItem('cnc_erp_user', JSON.stringify(userData));
-      localStorage.removeItem('cnc_erp_logged_out');
       return userData;
     } finally {
       setIsLoading(false);
@@ -84,7 +90,6 @@ export function AuthProvider({ children }) {
       setTokenState(userToken);
       setToken(userToken);
       localStorage.setItem('cnc_erp_user', JSON.stringify(userData));
-      localStorage.removeItem('cnc_erp_logged_out');
       return userData;
     } finally {
       setIsLoading(false);
@@ -100,7 +105,6 @@ export function AuthProvider({ children }) {
     setTokenState(null);
     clearToken();
     localStorage.removeItem('cnc_erp_user');
-    localStorage.setItem('cnc_erp_logged_out', 'true');
   };
 
   return (

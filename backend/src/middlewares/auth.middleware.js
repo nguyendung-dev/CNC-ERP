@@ -23,14 +23,10 @@ function authMiddleware(req, res, next) {
     }
   }
 
-  // Fallback for open development requests
-  req.user = {
-    id: 1,
-    username: 'admin',
-    full_name: 'Quản trị viên Hệ thống',
-    role: 'admin',
-  };
-  next();
+  return res.status(401).json({
+    success: false,
+    message: 'Yêu cầu xác thực. Vui lòng đăng nhập để tiếp tục.',
+  });
 }
 
 /**
