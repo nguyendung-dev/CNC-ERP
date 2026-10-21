@@ -17,6 +17,7 @@ router.post(
   salesController.createQuotation
 );
 router.post('/quotations/:id/convert-to-so', authorizeRoles('sales'), salesController.convertToOrder);
+router.put('/quotations/:id', authorizeRoles('sales'), salesController.updateQuotation);
 router.delete('/quotations/:id', authorizeRoles('sales'), salesController.deleteQuotation);
 
 // Sales Orders (SO)
@@ -27,6 +28,7 @@ router.post(
   validateBody(['customer_name', 'part_name', 'order_qty', 'total_price']),
   salesController.createOrder
 );
+router.put('/orders/:id', authorizeRoles('sales'), salesController.updateOrder);
 router.patch('/orders/:id/progress', authorizeRoles('sales', 'production'), salesController.updateOrderProgress);
 router.delete('/orders/:id', authorizeRoles('sales'), salesController.deleteOrder);
 
@@ -38,6 +40,7 @@ router.post(
   validateBody(['customer_name', 'delivery_qty']),
   salesController.createDeliveryNote
 );
+router.put('/delivery-notes/:id', authorizeRoles('sales', 'warehouse'), salesController.updateDeliveryNote);
 router.post(
   '/delivery-notes/:id/confirm-export',
   authorizeRoles('warehouse'),

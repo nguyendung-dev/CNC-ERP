@@ -105,6 +105,33 @@ class FinanceController {
     }
   }
 
+  async updateAdvance(req, res, next) {
+    try {
+      const data = await financeService.updateAdvance(req.params.id, req.body);
+      res.json({ success: true, message: 'Cập nhật đề nghị tạm ứng thành công', data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updatePayment(req, res, next) {
+    try {
+      const data = await financeService.updatePayment(req.params.id, req.body);
+      res.json({ success: true, message: 'Cập nhật phiếu thanh toán thành công', data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateDebt(req, res, next) {
+    try {
+      const data = await financeService.updateDebt(req.params.id, req.body);
+      res.json({ success: true, message: 'Cập nhật công nợ thành công', data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async deleteAdvance(req, res, next) {
     try {
       await financeService.deleteAdvance(req.params.id);

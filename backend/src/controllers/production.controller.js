@@ -29,6 +29,15 @@ class ProductionController {
     }
   }
 
+  async updateProductionOrder(req, res, next) {
+    try {
+      const data = await productionService.updateProductionOrder(req.params.id, req.body);
+      res.json({ success: true, message: 'Cập nhật lệnh sản xuất LSX thành công', data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async updateProductionStep(req, res, next) {
     try {
       const data = await productionService.updateProductionStep(req.params.id, req.body);

@@ -102,6 +102,33 @@ class SalesController {
     }
   }
 
+  async updateQuotation(req, res, next) {
+    try {
+      const data = await salesService.updateQuotation(req.params.id, req.body);
+      res.json({ success: true, message: 'Cập nhật báo giá CNC thành công', data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateOrder(req, res, next) {
+    try {
+      const data = await salesService.updateOrder(req.params.id, req.body);
+      res.json({ success: true, message: 'Cập nhật đơn hàng SO thành công', data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateDeliveryNote(req, res, next) {
+    try {
+      const data = await salesService.updateDeliveryNote(req.params.id, req.body);
+      res.json({ success: true, message: 'Cập nhật phiếu giao hàng thành công', data });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async deleteQuotation(req, res, next) {
     try {
       await salesService.deleteQuotation(req.params.id);

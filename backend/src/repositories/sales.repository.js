@@ -135,6 +135,82 @@ class SalesRepository {
     return await this.getDeliveryNoteById(id);
   }
 
+  async updateQuotation(id, data) {
+    const {
+      customer_name, customer_phone, part_name, drawing_code,
+      quantity, raw_material_cost, machine_hours, machine_hourly_rate,
+      subcontract_cost, transport_cost, total_amount, status
+    } = data;
+    await pool.query(
+      `UPDATE quotations SET 
+        customer_name = COALESCE(?, customer_name),
+        customer_phone = COALESCE(?, customer_phone),
+        part_name = COALESCE(?, part_name),
+        drawing_code = COALESCE(?, drawing_code),
+        quantity = COALESCE(?, quantity),
+        raw_material_cost = COALESCE(?, raw_material_cost),
+        machine_hours = COALESCE(?, machine_hours),
+        machine_hourly_rate = COALESCE(?, machine_hourly_rate),
+        subcontract_cost = COALESCE(?, subcontract_cost),
+        transport_cost = COALESCE(?, transport_cost),
+        total_amount = COALESCE(?, total_amount),
+        status = COALESCE(?, status)
+      WHERE id = ?`,
+      [
+        customer_name, customer_phone, part_name, drawing_code,
+        quantity, raw_material_cost, machine_hours, machine_hourly_rate,
+        subcontract_cost, transport_cost, total_amount, status,
+        id
+      ]
+    );
+    return this.getQuotationById(id);
+  }
+
+  async updateOrder(id, data) {
+    const {
+      customer_name, part_name, drawing_code,
+      order_qty, total_price, delivery_deadline, status
+    } = data;
+    await pool.query(
+      `UPDATE sales_orders SET
+        customer_name = COALESCE(?, customer_name),
+        part_name = COALESCE(?, part_name),
+        drawing_code = COALESCE(?, drawing_code),
+        order_qty = COALESCE(?, order_qty),
+        total_price = COALESCE(?, total_price),
+        delivery_deadline = COALESCE(?, delivery_deadline),
+        status = COALESCE(?, status)
+      WHERE id = ?`,
+      [
+        customer_name, part_name, drawing_code,
+        order_qty, total_price, delivery_deadline, status,
+        id
+      ]
+    );
+    return this.getOrderById(id);
+  }
+
+  async updateDeliveryNote(id, data) {
+    const {
+      customer_name, drawing_code, delivery_qty, receiver_name, note, status
+    } = data;
+    await pool.query(
+      `UPDATE delivery_notes SET
+        customer_name = COALESCE(?, customer_name),
+        drawing_code = COALESCE(?, drawing_code),
+        delivery_qty = COALESCE(?, delivery_qty),
+        receiver_name = COALESCE(?, receiver_name),
+        note = COALESCE(?, note),
+        status = COALESCE(?, status)
+      WHERE id = ?`,
+      [
+        customer_name, drawing_code, delivery_qty, receiver_name, note, status,
+        id
+      ]
+    );
+    return this.getDeliveryNoteById(id);
+  }
+
   async deleteQuotation(id) {
     await pool.query('DELETE FROM quotations WHERE id = ?', [id]);
     return true;

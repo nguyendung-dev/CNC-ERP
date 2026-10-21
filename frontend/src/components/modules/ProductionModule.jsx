@@ -83,6 +83,16 @@ export default function ProductionModule({ initialSubTab }) {
 
   // Modals
   const [isLsxModalOpen, setIsLsxModalOpen] = useState(false);
+  const [isEditLsxOpen, setIsEditLsxOpen] = useState(false);
+  const [editingLsxId, setEditingLsxId] = useState(null);
+  const [editLsxForm, setEditLsxForm] = useState({
+    target_qty: 50,
+    current_step: 'Cắt phôi',
+    workshop_name: '',
+    priority: 'Bình thường',
+    notes: '',
+    status: 'in_progress',
+  });
   const [isWipModalOpen, setIsWipModalOpen] = useState(false);
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
   const [isHandoverModalOpen, setIsHandoverModalOpen] = useState(false);
@@ -266,6 +276,31 @@ export default function ProductionModule({ initialSubTab }) {
         to_step: nextStep,
         qty_passed: remaining,
       }));
+    }
+  };
+
+  const handleOpenEditLsx = (lsx) => {
+    setEditingLsxId(lsx.id);
+    setEditLsxForm({
+      target_qty: Number(lsx.target_qty) || 1,
+      current_step: lsx.current_step || 'Cắt phôi',
+      workshop_name: lsx.workshop_name || '',
+      priority: lsx.priority || 'Bình thường',
+      notes: lsx.notes || '',
+      status: lsx.status || 'in_progress',
+    });
+    setIsEditLsxOpen(true);
+  };
+
+  const handleUpdateLsx = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/production/orders/${editingLsxId}`, editLsxForm);
+      setIsEditLsxOpen(false);
+      loadData();
+      showSuccess('Cập nhật thành công!', 'Lệnh sản xuất đã được lưu thay đổi.');
+    } catch (err) {
+      showError('Lỗi cập nhật LSX', err.response?.data?.message || err.message);
     }
   };
 
@@ -624,6 +659,15 @@ export default function ProductionModule({ initialSubTab }) {
                       >
                         Bàn giao kho
                       </Button>
+                    )}
+                    {canManageProduction && (
+                      <button
+                        onClick={() => handleOpenEditLsx(row)}
+                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                        title="Chỉnh sửa lệnh sản xuất"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
                     )}
                     {canManageProduction && (
                       <button
@@ -1360,6 +1404,86 @@ export default function ProductionModule({ initialSubTab }) {
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 leading-relaxed">
               ✨ <strong>Lưu ý:</strong> Khi xác nhận, số lượng chi tiết đạt chuẩn sẽ được chuyển giao vào Kho Thành Phẩm. Thủ kho và bộ phận Bán hàng có thể lập Phiếu Giao Hàng (Delivery Note) để xuất giao cho đơn hàng SO.
             </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Edit LSX Modal */}
+      {isEditLsxOpen && (
+        <Modal
+          isOpen={isEditLsxOpen}
+          onClose={() => setIsEditLsxOpen(false)}
+          title="Chỉnh Sửa Lệnh Sản Xuất CNC"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setIsEditLsxOpen(false)}>
+                Hủy bỏ
+              </Button>
+              <Button variant="primary" onClick={handleUpdateLsx} icon={Pencil}>
+                Lưu Thay Đổi
+              </Button>
+            </>
+          }
+        >
+          <form className="space-y-4" onSubmit={handleUpdateLsx}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Số lượng kế hoạch cần sản xuất"
+                type="number"
+                value={editLsxForm.target_qty}
+                onChange={(e) => setEditLsxForm({ ...editLsxForm, target_qty: Number(e.target.value) })}
+                required
+              />
+              <Select
+                label="Phân xưởng CNC phụ trách"
+                value={editLsxForm.workshop_name}
+                onChange={(e) => setEditLsxForm({ ...editLsxForm, workshop_name: e.target.value })}
+                options={[
+                  { value: '', label: '-- Chọn xưởng nhận lệnh --' },
+                  ...workshops.map((ws) => ({
+                    value: `${ws.name} (${ws.main_machines || ws.code})`,
+                    label: `${ws.name} (${ws.main_machines || ws.code})`,
+                  })),
+                ]}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select
+                label="Công đoạn hiện tại"
+                value={editLsxForm.current_step}
+                onChange={(e) => setEditLsxForm({ ...editLsxForm, current_step: e.target.value })}
+                options={STANDARD_CNC_STEPS.map((s) => ({ value: s.value, label: s.label }))}
+              />
+              <Select
+                label="Mức độ ưu tiên"
+                value={editLsxForm.priority}
+                onChange={(e) => setEditLsxForm({ ...editLsxForm, priority: e.target.value })}
+                options={[
+                  { value: 'Bình thường', label: 'Bình thường' },
+                  { value: 'Gấp (Ưu tiên)', label: 'Gấp (Ưu tiên)' },
+                  { value: 'Rất gấp (Hỏa tốc)', label: 'Rất gấp (Hỏa tốc)' },
+                ]}
+              />
+            </div>
+
+            <Select
+              label="Trạng thái lệnh sản xuất"
+              value={editLsxForm.status}
+              onChange={(e) => setEditLsxForm({ ...editLsxForm, status: e.target.value })}
+              options={[
+                { value: 'in_progress', label: 'Đang gia công' },
+                { value: 'completed', label: 'Đã hoàn thành' },
+                { value: 'cancelled', label: 'Đã hủy' },
+              ]}
+            />
+
+            <Input
+              label="Ghi chú kỹ thuật / Điều phối"
+              placeholder="VD: Chú ý phay dung sai H7, kiểm dao sau mỗi 10 chi tiết..."
+              value={editLsxForm.notes}
+              onChange={(e) => setEditLsxForm({ ...editLsxForm, notes: e.target.value })}
+            />
           </form>
         </Modal>
       )}

@@ -101,6 +101,58 @@ class FinanceRepository {
     return this.getDebtById(id);
   }
 
+  async updateAdvance(id, data) {
+    const { requester, purpose, amount, status } = data;
+    await pool.query(
+      `UPDATE advances SET
+        requester = COALESCE(?, requester),
+        purpose = COALESCE(?, purpose),
+        amount = COALESCE(?, amount),
+        status = COALESCE(?, status)
+      WHERE id = ?`,
+      [requester, purpose, amount, status, id]
+    );
+    return this.getAdvanceById(id);
+  }
+
+  async updatePayment(id, data) {
+    const { recipient, category, gross_amount, deduct_advance_amount, note, status } = data;
+    const payment = await this.getPaymentById(id);
+    if (!payment) return null;
+    const gross = gross_amount !== undefined ? Number(gross_amount) : Number(payment.gross_amount);
+    const deduct = deduct_advance_amount !== undefined ? Number(deduct_advance_amount) : Number(payment.deduct_advance_amount);
+    const net = Math.max(0, gross - deduct);
+
+    await pool.query(
+      `UPDATE payment_requests SET
+        recipient = COALESCE(?, recipient),
+        category = COALESCE(?, category),
+        gross_amount = ?,
+        deduct_advance_amount = ?,
+        net_amount = ?,
+        note = COALESCE(?, note),
+        status = COALESCE(?, status)
+      WHERE id = ?`,
+      [recipient, category, gross, deduct, net, note, status, id]
+    );
+    return this.getPaymentById(id);
+  }
+
+  async updateDebt(id, data) {
+    const { partner_name, type, total_amount, due_date, status } = data;
+    await pool.query(
+      `UPDATE debts SET
+        partner_name = COALESCE(?, partner_name),
+        type = COALESCE(?, type),
+        total_amount = COALESCE(?, total_amount),
+        due_date = COALESCE(?, due_date),
+        status = COALESCE(?, status)
+      WHERE id = ?`,
+      [partner_name, type, total_amount, due_date, status, id]
+    );
+    return this.getDebtById(id);
+  }
+
   async deleteAdvance(id) {
     await pool.query('DELETE FROM advances WHERE id = ?', [id]);
     return true;

@@ -57,6 +57,18 @@ class FinanceService {
     return await financeRepo.recordDebtPayment(id, paymentAmount);
   }
 
+  async updateAdvance(id, data) {
+    return await financeRepo.updateAdvance(id, data);
+  }
+
+  async updatePayment(id, data) {
+    return await financeRepo.updatePayment(id, data);
+  }
+
+  async updateDebt(id, data) {
+    return await financeRepo.updateDebt(id, data);
+  }
+
   async deleteAdvance(id) {
     return await financeRepo.deleteAdvance(id);
   }

@@ -12,6 +12,7 @@ import {
   AlertTriangle, 
   DollarSign, 
   Calculator,
+  Pencil,
   Trash2,
   Upload,
   Paperclip,
@@ -85,6 +86,46 @@ export default function SalesModule({ initialSubTab }) {
     note: '',
   });
 
+  // Edit states for Quotations, Orders, Deliveries
+  const [isEditQuotationOpen, setIsEditQuotationOpen] = useState(false);
+  const [editingQuotationId, setEditingQuotationId] = useState(null);
+  const [editQuotationForm, setEditQuotationForm] = useState({
+    customer_name: '',
+    customer_phone: '',
+    part_name: '',
+    drawing_code: '',
+    quantity: 1,
+    raw_material_cost: 0,
+    machine_hours: 0,
+    machine_hourly_rate: 0,
+    subcontract_cost: 0,
+    transport_cost: 0,
+    status: 'draft',
+  });
+
+  const [isEditOrderOpen, setIsEditOrderOpen] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState(null);
+  const [editOrderForm, setEditOrderForm] = useState({
+    customer_name: '',
+    part_name: '',
+    drawing_code: '',
+    order_qty: 1,
+    total_price: 0,
+    delivery_deadline: '',
+    status: 'in_production',
+  });
+
+  const [isEditDeliveryOpen, setIsEditDeliveryOpen] = useState(false);
+  const [editingDeliveryId, setEditingDeliveryId] = useState(null);
+  const [editDeliveryForm, setEditDeliveryForm] = useState({
+    customer_name: '',
+    drawing_code: '',
+    delivery_qty: 1,
+    receiver_name: '',
+    note: '',
+    status: 'pending_warehouse',
+  });
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -143,6 +184,96 @@ export default function SalesModule({ initialSubTab }) {
       showSuccess('Tạo báo giá thành công!', 'Báo giá cho chi tiết "' + partName + '" của khách hàng ' + customerName + ' đã được tạo.');
     } catch (err) {
       showError('Lỗi lập báo giá', err.response?.data?.message || err.message);
+    }
+  };
+
+  const editQuotationEstimatedTotal =
+    Number(editQuotationForm.raw_material_cost || 0) +
+    Number(editQuotationForm.machine_hours || 0) * Number(editQuotationForm.machine_hourly_rate || 0) +
+    Number(editQuotationForm.subcontract_cost || 0) +
+    Number(editQuotationForm.transport_cost || 0);
+
+  const handleOpenEditQuotation = (q) => {
+    setEditingQuotationId(q.id);
+    setEditQuotationForm({
+      customer_name: q.customer_name || '',
+      customer_phone: q.customer_phone || '',
+      part_name: q.part_name || '',
+      drawing_code: q.drawing_code || '',
+      quantity: Number(q.quantity) || 1,
+      raw_material_cost: Number(q.raw_material_cost) || 0,
+      machine_hours: Number(q.machine_hours) || 0,
+      machine_hourly_rate: Number(q.machine_hourly_rate) || 0,
+      subcontract_cost: Number(q.subcontract_cost) || 0,
+      transport_cost: Number(q.transport_cost) || 0,
+      status: q.status || 'draft',
+    });
+    setIsEditQuotationOpen(true);
+  };
+
+  const handleUpdateQuotation = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/sales/quotations/${editingQuotationId}`, {
+        ...editQuotationForm,
+        total_amount: editQuotationEstimatedTotal,
+      });
+      setIsEditQuotationOpen(false);
+      loadData();
+      showSuccess('Cập nhật thành công!', `Báo giá cho chi tiết "${editQuotationForm.part_name}" đã được cập nhật.`);
+    } catch (err) {
+      showError('Lỗi cập nhật báo giá', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleOpenEditOrder = (o) => {
+    setEditingOrderId(o.id);
+    setEditOrderForm({
+      customer_name: o.customer_name || '',
+      part_name: o.part_name || '',
+      drawing_code: o.drawing_code || '',
+      order_qty: Number(o.order_qty) || 1,
+      total_price: Number(o.total_price) || 0,
+      delivery_deadline: o.delivery_deadline ? o.delivery_deadline.split('T')[0] : '',
+      status: o.status || 'in_production',
+    });
+    setIsEditOrderOpen(true);
+  };
+
+  const handleUpdateOrder = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/sales/orders/${editingOrderId}`, editOrderForm);
+      setIsEditOrderOpen(false);
+      loadData();
+      showSuccess('Cập nhật thành công!', `Đơn hàng SO "${editOrderForm.part_name}" đã được cập nhật.`);
+    } catch (err) {
+      showError('Lỗi cập nhật đơn hàng', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleOpenEditDelivery = (d) => {
+    setEditingDeliveryId(d.id);
+    setEditDeliveryForm({
+      customer_name: d.customer_name || '',
+      drawing_code: d.drawing_code || '',
+      delivery_qty: Number(d.delivery_qty) || 1,
+      receiver_name: d.receiver_name || '',
+      note: d.note || '',
+      status: d.status || 'pending_warehouse',
+    });
+    setIsEditDeliveryOpen(true);
+  };
+
+  const handleUpdateDelivery = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/sales/delivery-notes/${editingDeliveryId}`, editDeliveryForm);
+      setIsEditDeliveryOpen(false);
+      loadData();
+      showSuccess('Cập nhật thành công!', `Phiếu giao hàng cho "${editDeliveryForm.customer_name}" đã được cập nhật.`);
+    } catch (err) {
+      showError('Lỗi cập nhật phiếu giao hàng', err.response?.data?.message || err.message);
     }
   };
 
@@ -513,6 +644,15 @@ export default function SalesModule({ initialSubTab }) {
                       Tạo SO
                     </Button>
                   )}
+                  {canManageQuotations && (
+                    <button
+                      onClick={() => handleOpenEditQuotation(row)}
+                      className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                      title="Chỉnh sửa báo giá"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDeleteQuotation(row.id)}
                     className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
@@ -602,6 +742,15 @@ export default function SalesModule({ initialSubTab }) {
 
                     {canManageQuotations && (
                       <button
+                        onClick={() => handleOpenEditOrder(row)}
+                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                        title="Chỉnh sửa đơn hàng SO"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {canManageQuotations && (
+                      <button
                         onClick={() => handleDeleteOrder(row.id)}
                         className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
                         title="Xóa đơn hàng SO"
@@ -667,6 +816,15 @@ export default function SalesModule({ initialSubTab }) {
                     </Button>
                   )}
 
+                  {canManageDeliveries && (
+                    <button
+                      onClick={() => handleOpenEditDelivery(row)}
+                      className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                      title="Chỉnh sửa phiếu giao hàng"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   {canManageDeliveries && (
                     <button
                       onClick={() => handleDeleteDelivery(row.id)}
@@ -986,6 +1144,263 @@ export default function SalesModule({ initialSubTab }) {
           />
         </form>
       </Modal>
+
+      {/* Edit Quotation Modal */}
+      {isEditQuotationOpen && (
+        <Modal
+          isOpen={isEditQuotationOpen}
+          onClose={() => setIsEditQuotationOpen(false)}
+          title="Chỉnh Sửa Báo Giá CNC"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setIsEditQuotationOpen(false)}>
+                Hủy bỏ
+              </Button>
+              <Button variant="primary" onClick={handleUpdateQuotation} icon={Pencil}>
+                Lưu Thay Đổi
+              </Button>
+            </>
+          }
+        >
+          <form className="space-y-4" onSubmit={handleUpdateQuotation}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Khách hàng"
+                value={editQuotationForm.customer_name}
+                onChange={(e) => setEditQuotationForm({ ...editQuotationForm, customer_name: e.target.value })}
+                required
+              />
+              <Input
+                label="Số điện thoại / Liên hệ"
+                value={editQuotationForm.customer_phone}
+                onChange={(e) => setEditQuotationForm({ ...editQuotationForm, customer_phone: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Tên chi tiết gia công CNC"
+                value={editQuotationForm.part_name}
+                onChange={(e) => setEditQuotationForm({ ...editQuotationForm, part_name: e.target.value })}
+                required
+              />
+              <Input
+                label="Số lượng chi tiết"
+                type="number"
+                value={editQuotationForm.quantity}
+                onChange={(e) => setEditQuotationForm({ ...editQuotationForm, quantity: Number(e.target.value) })}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Mã bản vẽ kỹ thuật"
+                value={editQuotationForm.drawing_code}
+                onChange={(e) => setEditQuotationForm({ ...editQuotationForm, drawing_code: e.target.value })}
+              />
+              <Select
+                label="Trạng thái báo giá"
+                value={editQuotationForm.status}
+                onChange={(e) => setEditQuotationForm({ ...editQuotationForm, status: e.target.value })}
+                options={[
+                  { value: 'draft', label: 'Bản nháp (Draft)' },
+                  { value: 'sent', label: 'Đã gửi khách' },
+                  { value: 'approved', label: 'Khách duyệt' },
+                  { value: 'converted_to_so', label: 'Đã chuyển thành SO' },
+                  { value: 'rejected', label: 'Đã từ chối' },
+                ]}
+              />
+            </div>
+
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <DollarSign className="w-4 h-4 text-blue-600" /> Cấu thành chi phí gia công
+              </h4>
+
+              <div className="grid grid-cols-2 gap-4">
+                <CurrencyInput
+                  label="Chi phí phôi (VNĐ)"
+                  value={editQuotationForm.raw_material_cost}
+                  onChange={(val) => setEditQuotationForm({ ...editQuotationForm, raw_material_cost: val })}
+                />
+                <Input
+                  label="Số giờ chạy máy CNC (h)"
+                  type="number"
+                  step="0.5"
+                  value={editQuotationForm.machine_hours}
+                  onChange={(e) => setEditQuotationForm({ ...editQuotationForm, machine_hours: Number(e.target.value) })}
+                />
+                <CurrencyInput
+                  label="Đơn giá giờ máy (VNĐ/h)"
+                  value={editQuotationForm.machine_hourly_rate}
+                  onChange={(val) => setEditQuotationForm({ ...editQuotationForm, machine_hourly_rate: val })}
+                />
+                <CurrencyInput
+                  label="Gia công ngoài (Xi mạ, Nhiệt luyện)"
+                  value={editQuotationForm.subcontract_cost}
+                  onChange={(val) => setEditQuotationForm({ ...editQuotationForm, subcontract_cost: val })}
+                />
+              </div>
+
+              <CurrencyInput
+                label="Chi phí vận chuyển & bao bì (VNĐ)"
+                value={editQuotationForm.transport_cost}
+                onChange={(val) => setEditQuotationForm({ ...editQuotationForm, transport_cost: val })}
+              />
+
+              <div className="pt-2 flex justify-between items-center text-sm font-bold border-t border-slate-200">
+                <span className="text-slate-700">Tổng báo giá tính toán:</span>
+                <span className="text-blue-600 text-lg">{editQuotationEstimatedTotal.toLocaleString()} VNĐ</span>
+              </div>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Edit Order Modal */}
+      {isEditOrderOpen && (
+        <Modal
+          isOpen={isEditOrderOpen}
+          onClose={() => setIsEditOrderOpen(false)}
+          title="Chỉnh Sửa Đơn Đặt Hàng (SO)"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setIsEditOrderOpen(false)}>
+                Hủy bỏ
+              </Button>
+              <Button variant="primary" onClick={handleUpdateOrder} icon={Pencil}>
+                Lưu Thay Đổi
+              </Button>
+            </>
+          }
+        >
+          <form className="space-y-4" onSubmit={handleUpdateOrder}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Khách hàng"
+                value={editOrderForm.customer_name}
+                onChange={(e) => setEditOrderForm({ ...editOrderForm, customer_name: e.target.value })}
+                required
+              />
+              <Input
+                label="Tên chi tiết CNC"
+                value={editOrderForm.part_name}
+                onChange={(e) => setEditOrderForm({ ...editOrderForm, part_name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Mã bản vẽ"
+                value={editOrderForm.drawing_code}
+                onChange={(e) => setEditOrderForm({ ...editOrderForm, drawing_code: e.target.value })}
+              />
+              <Input
+                label="Số lượng đặt"
+                type="number"
+                value={editOrderForm.order_qty}
+                onChange={(e) => setEditOrderForm({ ...editOrderForm, order_qty: Number(e.target.value) })}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <CurrencyInput
+                label="Tổng giá trị đơn hàng (VNĐ)"
+                value={editOrderForm.total_price}
+                onChange={(val) => setEditOrderForm({ ...editOrderForm, total_price: val })}
+              />
+              <Input
+                label="Hạn giao hàng"
+                type="date"
+                value={editOrderForm.delivery_deadline}
+                onChange={(e) => setEditOrderForm({ ...editOrderForm, delivery_deadline: e.target.value })}
+              />
+            </div>
+
+            <Select
+              label="Trạng thái đơn hàng"
+              value={editOrderForm.status}
+              onChange={(e) => setEditOrderForm({ ...editOrderForm, status: e.target.value })}
+              options={[
+                { value: 'in_production', label: 'Đang sản xuất' },
+                { value: 'partially_delivered', label: 'Đã giao 1 phần' },
+                { value: 'completed', label: 'Đã hoàn thành' },
+                { value: 'cancelled', label: 'Đã hủy đơn' },
+              ]}
+            />
+          </form>
+        </Modal>
+      )}
+
+      {/* Edit Delivery Modal */}
+      {isEditDeliveryOpen && (
+        <Modal
+          isOpen={isEditDeliveryOpen}
+          onClose={() => setIsEditDeliveryOpen(false)}
+          title="Chỉnh Sửa Phiếu Giao Hàng"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setIsEditDeliveryOpen(false)}>
+                Hủy bỏ
+              </Button>
+              <Button variant="primary" onClick={handleUpdateDelivery} icon={Pencil}>
+                Lưu Thay Đổi
+              </Button>
+            </>
+          }
+        >
+          <form className="space-y-4" onSubmit={handleUpdateDelivery}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Khách hàng"
+                value={editDeliveryForm.customer_name}
+                onChange={(e) => setEditDeliveryForm({ ...editDeliveryForm, customer_name: e.target.value })}
+                required
+              />
+              <Input
+                label="Mã bản vẽ"
+                value={editDeliveryForm.drawing_code}
+                onChange={(e) => setEditDeliveryForm({ ...editDeliveryForm, drawing_code: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Số lượng xuất giao"
+                type="number"
+                value={editDeliveryForm.delivery_qty}
+                onChange={(e) => setEditDeliveryForm({ ...editDeliveryForm, delivery_qty: Number(e.target.value) })}
+                required
+              />
+              <Input
+                label="Người đại diện nhận hàng"
+                value={editDeliveryForm.receiver_name}
+                onChange={(e) => setEditDeliveryForm({ ...editDeliveryForm, receiver_name: e.target.value })}
+                required
+              />
+            </div>
+
+            <Input
+              label="Ghi chú đính kèm"
+              value={editDeliveryForm.note}
+              onChange={(e) => setEditDeliveryForm({ ...editDeliveryForm, note: e.target.value })}
+            />
+
+            <Select
+              label="Trạng thái phiếu"
+              value={editDeliveryForm.status}
+              onChange={(e) => setEditDeliveryForm({ ...editDeliveryForm, status: e.target.value })}
+              options={[
+                { value: 'pending_warehouse', label: 'Chờ Thủ kho kiểm hàng' },
+                { value: 'exported', label: 'Đã xuất kho' },
+              ]}
+            />
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

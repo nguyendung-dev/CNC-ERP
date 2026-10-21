@@ -9,6 +9,7 @@ import {
   Clock, 
   ArrowDownRight, 
   ArrowUpRight,
+  Pencil,
   Trash2
 } from 'lucide-react';
 import api from '../../api';
@@ -41,6 +42,37 @@ export default function FinanceModule({ initialSubTab }) {
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [payingDebt, setPayingDebt] = useState(null);
   const [payAmount, setPayAmount] = useState(0);
+
+  // Edit states for Advances, Payments, Debts
+  const [isEditAdvanceOpen, setIsEditAdvanceOpen] = useState(false);
+  const [editingAdvanceId, setEditingAdvanceId] = useState(null);
+  const [editAdvanceForm, setEditAdvanceForm] = useState({
+    requester: '',
+    purpose: '',
+    amount: 0,
+    status: 'pending',
+  });
+
+  const [isEditPaymentOpen, setIsEditPaymentOpen] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState(null);
+  const [editPaymentForm, setEditPaymentForm] = useState({
+    recipient: '',
+    category: 'Xưởng gia công ngoài',
+    gross_amount: 0,
+    deduct_advance_amount: 0,
+    note: '',
+    status: 'pending',
+  });
+
+  const [isEditDebtOpen, setIsEditDebtOpen] = useState(false);
+  const [editingDebtId, setEditingDebtId] = useState(null);
+  const [editDebtForm, setEditDebtForm] = useState({
+    partner_name: '',
+    type: 'receivable',
+    total_amount: 0,
+    due_date: '',
+    status: 'unpaid',
+  });
 
   // Forms
   const [advanceForm, setAdvanceForm] = useState({
@@ -181,6 +213,78 @@ export default function FinanceModule({ initialSubTab }) {
       showSuccess('Lưu công nợ thành công', `Hồ sơ công nợ của ${debtForm.partner_name} đã được cập nhật.`);
     } catch (err) {
       showError('Có lỗi xảy ra', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleOpenEditAdvance = (adv) => {
+    setEditingAdvanceId(adv.id);
+    setEditAdvanceForm({
+      requester: adv.requester || '',
+      purpose: adv.purpose || '',
+      amount: Number(adv.amount) || 0,
+      status: adv.status || 'pending',
+    });
+    setIsEditAdvanceOpen(true);
+  };
+
+  const handleUpdateAdvance = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/finance/advances/${editingAdvanceId}`, editAdvanceForm);
+      setIsEditAdvanceOpen(false);
+      loadData();
+      showSuccess('Cập nhật thành công!', 'Phiếu tạm ứng đã được lưu thay đổi.');
+    } catch (err) {
+      showError('Lỗi cập nhật tạm ứng', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleOpenEditPayment = (pay) => {
+    setEditingPaymentId(pay.id);
+    setEditPaymentForm({
+      recipient: pay.recipient || '',
+      category: pay.category || 'Xưởng gia công ngoài',
+      gross_amount: Number(pay.gross_amount) || 0,
+      deduct_advance_amount: Number(pay.deduct_advance_amount) || 0,
+      note: pay.note || '',
+      status: pay.status || 'pending',
+    });
+    setIsEditPaymentOpen(true);
+  };
+
+  const handleUpdatePayment = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/finance/payments/${editingPaymentId}`, editPaymentForm);
+      setIsEditPaymentOpen(false);
+      loadData();
+      showSuccess('Cập nhật thành công!', 'Phiếu thanh toán đã được lưu thay đổi.');
+    } catch (err) {
+      showError('Lỗi cập nhật thanh toán', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleOpenEditDebt = (d) => {
+    setEditingDebtId(d.id);
+    setEditDebtForm({
+      partner_name: d.partner_name || '',
+      type: d.type || 'receivable',
+      total_amount: Number(d.total_amount) || 0,
+      due_date: d.due_date ? d.due_date.split('T')[0] : '',
+      status: d.status || 'unpaid',
+    });
+    setIsEditDebtOpen(true);
+  };
+
+  const handleUpdateDebt = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/finance/debts/${editingDebtId}`, editDebtForm);
+      setIsEditDebtOpen(false);
+      loadData();
+      showSuccess('Cập nhật thành công!', 'Hồ sơ công nợ đã được lưu thay đổi.');
+    } catch (err) {
+      showError('Lỗi cập nhật công nợ', err.response?.data?.message || err.message);
     }
   };
 
@@ -337,6 +441,13 @@ export default function FinanceModule({ initialSubTab }) {
                     </Button>
                   )}
                   <button
+                    onClick={() => handleOpenEditAdvance(row)}
+                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                    title="Chỉnh sửa phiếu tạm ứng"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
                     onClick={() => handleDeleteAdvance(row.id)}
                     className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
                     title="Xóa phiếu tạm ứng"
@@ -387,13 +498,22 @@ export default function FinanceModule({ initialSubTab }) {
             {
               header: 'Thao tác',
               render: (row) => (
-                <button
-                  onClick={() => handleDeletePayment(row.id)}
-                  className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                  title="Xóa phiếu thanh toán"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleOpenEditPayment(row)}
+                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                    title="Chỉnh sửa phiếu thanh toán"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDeletePayment(row.id)}
+                    className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                    title="Xóa phiếu thanh toán"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               ),
             },
           ]}
@@ -460,6 +580,13 @@ export default function FinanceModule({ initialSubTab }) {
                       Ghi nhận trả
                     </Button>
                   )}
+                  <button
+                    onClick={() => handleOpenEditDebt(row)}
+                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
+                    title="Chỉnh sửa hồ sơ công nợ"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
                   <button
                     onClick={() => handleDeleteDebt(row.id)}
                     className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
@@ -675,6 +802,185 @@ export default function FinanceModule({ initialSubTab }) {
               required
             />
           </div>
+        </Modal>
+      )}
+
+      {/* Edit Advance Modal */}
+      {isEditAdvanceOpen && (
+        <Modal
+          isOpen={isEditAdvanceOpen}
+          onClose={() => setIsEditAdvanceOpen(false)}
+          title="Chỉnh Sửa Phiếu Tạm Ứng"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setIsEditAdvanceOpen(false)}>
+                Hủy bỏ
+              </Button>
+              <Button variant="primary" onClick={handleUpdateAdvance} icon={Pencil}>
+                Lưu Thay Đổi
+              </Button>
+            </>
+          }
+        >
+          <form className="space-y-4" onSubmit={handleUpdateAdvance}>
+            <Input
+              label="Người đề nghị"
+              value={editAdvanceForm.requester}
+              onChange={(e) => setEditAdvanceForm({ ...editAdvanceForm, requester: e.target.value })}
+              required
+            />
+            <Input
+              label="Mục đích tạm ứng"
+              value={editAdvanceForm.purpose}
+              onChange={(e) => setEditAdvanceForm({ ...editAdvanceForm, purpose: e.target.value })}
+              required
+            />
+            <CurrencyInput
+              label="Số tiền tạm ứng (VNĐ)"
+              value={editAdvanceForm.amount}
+              onChange={(val) => setEditAdvanceForm({ ...editAdvanceForm, amount: val })}
+              required
+            />
+            <Select
+              label="Trạng thái"
+              value={editAdvanceForm.status}
+              onChange={(e) => setEditAdvanceForm({ ...editAdvanceForm, status: e.target.value })}
+              options={[
+                { value: 'pending', label: 'Chờ duyệt' },
+                { value: 'approved', label: 'Đã duyệt' },
+                { value: 'rejected', label: 'Từ chối' },
+              ]}
+            />
+          </form>
+        </Modal>
+      )}
+
+      {/* Edit Payment Modal */}
+      {isEditPaymentOpen && (
+        <Modal
+          isOpen={isEditPaymentOpen}
+          onClose={() => setIsEditPaymentOpen(false)}
+          title="Chỉnh Sửa Phiếu Thanh Toán"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setIsEditPaymentOpen(false)}>
+                Hủy bỏ
+              </Button>
+              <Button variant="primary" onClick={handleUpdatePayment} icon={Pencil}>
+                Lưu Thay Đổi
+              </Button>
+            </>
+          }
+        >
+          <form className="space-y-4" onSubmit={handleUpdatePayment}>
+            <Input
+              label="Đơn vị thụ hưởng"
+              value={editPaymentForm.recipient}
+              onChange={(e) => setEditPaymentForm({ ...editPaymentForm, recipient: e.target.value })}
+              required
+            />
+            <Select
+              label="Phân loại chi phí"
+              value={editPaymentForm.category}
+              onChange={(e) => setEditPaymentForm({ ...editPaymentForm, category: e.target.value })}
+              options={[
+                { value: 'Xưởng gia công ngoài', label: 'Xưởng gia công ngoài' },
+                { value: 'Mua phôi & kim loại', label: 'Mua phôi & kim loại' },
+                { value: 'Dao cụ & Phụ tùng máy', label: 'Dao cụ & Phụ tùng máy' },
+                { value: 'Vận chuyển & logistics', label: 'Vận chuyển & logistics' },
+                { value: 'Chi phí vận hành xưởng', label: 'Chi phí vận hành xưởng' },
+              ]}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <CurrencyInput
+                label="Tổng số tiền đề nghị"
+                value={editPaymentForm.gross_amount}
+                onChange={(val) => setEditPaymentForm({ ...editPaymentForm, gross_amount: val })}
+                required
+              />
+              <CurrencyInput
+                label="Trừ lùi tạm ứng"
+                value={editPaymentForm.deduct_advance_amount}
+                onChange={(val) => setEditPaymentForm({ ...editPaymentForm, deduct_advance_amount: val })}
+              />
+            </div>
+            <Input
+              label="Ghi chú chi"
+              value={editPaymentForm.note}
+              onChange={(e) => setEditPaymentForm({ ...editPaymentForm, note: e.target.value })}
+            />
+            <Select
+              label="Trạng thái"
+              value={editPaymentForm.status}
+              onChange={(e) => setEditPaymentForm({ ...editPaymentForm, status: e.target.value })}
+              options={[
+                { value: 'pending', label: 'Chờ duyệt' },
+                { value: 'paid', label: 'Đã chi' },
+                { value: 'cancelled', label: 'Đã hủy' },
+              ]}
+            />
+          </form>
+        </Modal>
+      )}
+
+      {/* Edit Debt Modal */}
+      {isEditDebtOpen && (
+        <Modal
+          isOpen={isEditDebtOpen}
+          onClose={() => setIsEditDebtOpen(false)}
+          title="Chỉnh Sửa Hồ Sơ Công Nợ"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setIsEditDebtOpen(false)}>
+                Hủy bỏ
+              </Button>
+              <Button variant="primary" onClick={handleUpdateDebt} icon={Pencil}>
+                Lưu Thay Đổi
+              </Button>
+            </>
+          }
+        >
+          <form className="space-y-4" onSubmit={handleUpdateDebt}>
+            <Input
+              label="Đối tác / Doanh nghiệp"
+              value={editDebtForm.partner_name}
+              onChange={(e) => setEditDebtForm({ ...editDebtForm, partner_name: e.target.value })}
+              required
+            />
+            <Select
+              label="Phân loại công nợ"
+              value={editDebtForm.type}
+              onChange={(e) => setEditDebtForm({ ...editDebtForm, type: e.target.value })}
+              options={[
+                { value: 'receivable', label: 'Phải thu (Khách hàng nợ)' },
+                { value: 'payable', label: 'Phải trả (Nợ xưởng/NCC)' },
+              ]}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <CurrencyInput
+                label="Tổng số tiền công nợ"
+                value={editDebtForm.total_amount}
+                onChange={(val) => setEditDebtForm({ ...editDebtForm, total_amount: val })}
+                required
+              />
+              <Input
+                label="Hạn thanh toán"
+                type="date"
+                value={editDebtForm.due_date}
+                onChange={(e) => setEditDebtForm({ ...editDebtForm, due_date: e.target.value })}
+              />
+            </div>
+            <Select
+              label="Trạng thái công nợ"
+              value={editDebtForm.status}
+              onChange={(e) => setEditDebtForm({ ...editDebtForm, status: e.target.value })}
+              options={[
+                { value: 'unpaid', label: 'Chưa thanh toán' },
+                { value: 'partial', label: 'Thanh toán một phần' },
+                { value: 'paid', label: 'Đã tất toán' },
+              ]}
+            />
+          </form>
         </Modal>
       )}
     </div>

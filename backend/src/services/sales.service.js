@@ -191,6 +191,27 @@ class SalesService {
     return await salesRepo.updateDeliveryNoteStatus(id, 'exported', checkedBy);
   }
 
+  async updateQuotation(id, data) {
+    const rawCost = data.raw_material_cost !== undefined ? Number(data.raw_material_cost) : undefined;
+    const hours = data.machine_hours !== undefined ? Number(data.machine_hours) : undefined;
+    const rate = data.machine_hourly_rate !== undefined ? Number(data.machine_hourly_rate) : undefined;
+    const subCost = data.subcontract_cost !== undefined ? Number(data.subcontract_cost) : undefined;
+    const transCost = data.transport_cost !== undefined ? Number(data.transport_cost) : undefined;
+
+    if (rawCost !== undefined && hours !== undefined && rate !== undefined) {
+      data.total_amount = rawCost + (hours * rate) + (subCost || 0) + (transCost || 0);
+    }
+    return await salesRepo.updateQuotation(id, data);
+  }
+
+  async updateOrder(id, data) {
+    return await salesRepo.updateOrder(id, data);
+  }
+
+  async updateDeliveryNote(id, data) {
+    return await salesRepo.updateDeliveryNote(id, data);
+  }
+
   async deleteQuotation(id) {
     return await salesRepo.deleteQuotation(id);
   }

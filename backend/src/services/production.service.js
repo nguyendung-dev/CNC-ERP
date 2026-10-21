@@ -34,6 +34,10 @@ class ProductionService {
     return await productionRepo.createProductionOrder(data);
   }
 
+  async updateProductionOrder(id, data) {
+    return await productionRepo.updateProductionOrder(id, data);
+  }
+
   async updateProductionStep(id, updateData) {
     return await productionRepo.updateProductionStep(id, updateData);
   }

@@ -32,6 +32,22 @@ class ProductionRepository {
     return this.getProductionOrderById(result.insertId);
   }
 
+  async updateProductionOrder(id, data) {
+    const { target_qty, workshop_name, priority, notes, current_step, status } = data;
+    await pool.query(
+      `UPDATE production_orders SET
+        target_qty = COALESCE(?, target_qty),
+        workshop_name = COALESCE(?, workshop_name),
+        priority = COALESCE(?, priority),
+        notes = COALESCE(?, notes),
+        current_step = COALESCE(?, current_step),
+        status = COALESCE(?, status)
+      WHERE id = ?`,
+      [target_qty, workshop_name, priority, notes, current_step, status, id]
+    );
+    return this.getProductionOrderById(id);
+  }
+
   async updateProductionStep(id, { current_step, workshop_name, completed_qty, ng_qty, status }) {
     const updates = [];
     const params = [];
