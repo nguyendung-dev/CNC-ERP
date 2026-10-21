@@ -4,7 +4,7 @@ import { t } from '../i18n';
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, X, AlertTriangle, Info, Trash2 } from 'lucide-react';
+import { Check, X, AlertTriangle, Info, Trash2, CheckCircle2 } from 'lucide-react';
 
 const ToastContext = createContext(null);
 
@@ -20,6 +20,14 @@ export function ToastProvider({ children }) {
     cancelText: t('toast.cancel_btn', 'Hủy bỏ'),
     onConfirm: null,
     loading: false,
+  });
+
+  const [successModal, setSuccessModal] = useState({
+    isOpen: false,
+    title: 'Thành Công!',
+    message: '',
+    itemName: '',
+    onClose: null,
   });
 
   useEffect(() => {
@@ -42,8 +50,44 @@ export function ToastProvider({ children }) {
     }
   }, [removeToast]);
 
-  const showSuccess = useCallback((title, message) => {
-    showToast({ type: 'success', title: title || t('common.success', 'Thành công'), message });
+  const showSuccessModal = useCallback((arg1, arg2) => {
+    let opts = {};
+    if (typeof arg1 === 'string') {
+      opts = {
+        title: 'Thao Tác Thành Công!',
+        message: arg1,
+        itemName: arg2 || '',
+      };
+    } else if (typeof arg1 === 'object' && arg1 !== null) {
+      opts = arg1;
+    }
+    setSuccessModal({
+      isOpen: true,
+      title: opts.title || 'Tạo Thành Công!',
+      message: opts.message || 'Dữ liệu mới đã được lưu vào hệ thống.',
+      itemName: opts.itemName || '',
+      onClose: opts.onClose || null,
+    });
+  }, []);
+
+  const closeSuccessModal = () => {
+    if (successModal.onClose) successModal.onClose();
+    setSuccessModal((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  const showSuccess = useCallback((title, message, options = {}) => {
+    showToast({ type: 'success', title: title || t('common.success', 'Thành công'), message, duration: 5000 });
+    
+    // Always trigger the Center Success Popup Modal so user cannot miss it!
+    if (options.modal !== false) {
+      setSuccessModal({
+        isOpen: true,
+        title: title || 'Thao Tác Thành Công!',
+        message: message || 'Dữ liệu đã được cập nhật thành công vào hệ thống.',
+        itemName: options.itemName || '',
+        onClose: options.onClose || null,
+      });
+    }
   }, [showToast]);
 
   const showError = useCallback((title, message) => {
@@ -98,6 +142,7 @@ export function ToastProvider({ children }) {
       value={{
         showToast,
         showSuccess,
+        showSuccessModal,
         showError,
         showInfo,
         confirmDelete,
@@ -224,6 +269,50 @@ export function ToastProvider({ children }) {
                           <span>{confirmModal.confirmText}</span>
                         </>
                       )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 3. PROMINENT SUCCESS POPUP MODAL (Center of screen, exactly matching creation popup request) */}
+            {successModal.isOpen && (
+              <div className="fixed inset-0 z-[9999999] flex items-center justify-center p-4">
+                {/* Dark Blur Backdrop */}
+                <div
+                  className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
+                  onClick={closeSuccessModal}
+                />
+
+                {/* Success Card */}
+                <div className="relative z-10 bg-white rounded-3xl max-w-sm sm:max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150 text-center">
+                  {/* Round Green Icon */}
+                  <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
+                    <CheckCircle2 className="w-9 h-9 stroke-[2.5]" />
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900">
+                      {successModal.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
+                      {successModal.message}
+                    </p>
+                    {successModal.itemName && (
+                      <div className="mt-3.5 px-3 py-2 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs font-mono font-semibold break-all">
+                        {successModal.itemName}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={closeSuccessModal}
+                      className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Check className="w-4 h-4 stroke-[3]" />
+                      Hoàn tất & Đóng
                     </button>
                   </div>
                 </div>

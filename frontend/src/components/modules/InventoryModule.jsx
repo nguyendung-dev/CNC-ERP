@@ -86,11 +86,15 @@ export default function InventoryModule() {
   }, []);
 
   const handleCreateMaterial = async (e) => {
-    e.preventDefault();
-    const createdName = form.name;
-    const createdCode = form.code;
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (!form.name || form.name.trim() === '') {
+      showError('Thiếu thông tin', 'Vui lòng nhập Tên vật tư / phôi cơ khí');
+      return;
+    }
+    const createdName = form.name.trim();
+    const createdCode = form.code ? form.code.trim() : 'VT-' + Date.now();
     try {
-      await api.post('/inventory/materials', form);
+      await api.post('/inventory/materials', { ...form, code: createdCode, name: createdName });
       setIsAddModalOpen(false);
       setForm({
         code: '',
@@ -105,7 +109,9 @@ export default function InventoryModule() {
         batch_no: '',
       });
       loadData();
-      showSuccess('Tạo vật tư thành công!', 'Vật tư "' + createdName + '" (' + createdCode + ') đã được thêm vào kho.');
+      showSuccess('Tạo vật tư thành công!', 'Vật tư "' + createdName + '" (' + createdCode + ') đã được thêm vào hệ thống kho thành công.', {
+        itemName: createdName + ' • Mã: ' + createdCode,
+      });
     } catch (err) {
       showError('Lỗi thêm vật tư', err.response?.data?.message || err.message);
     }
@@ -401,7 +407,7 @@ export default function InventoryModule() {
           </>
         }
       >
-        <form className="space-y-4">
+        <form onSubmit={handleCreateMaterial} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Mã vật tư"
