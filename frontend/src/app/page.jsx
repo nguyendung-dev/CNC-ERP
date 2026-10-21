@@ -85,9 +85,7 @@ export default function DashboardPage() {
   const [lowStockAlerts, setLowStockAlerts] = useState([]);
   const [subcontracts, setSubcontracts] = useState([]);
   const [dashboardStats, setDashboardStats] = useState(null);
-  const [workshops, setWorkshops] = useState([]);
-  const [selectedWorkshopId, setSelectedWorkshopId] = useState(null);
-  const [loading, setLoading] = useState(false);
+      const [loading, setLoading] = useState(false);
 
   // Filters for Pending Tasks on Dashboard
   const [taskCategoryFilter, setTaskCategoryFilter] = useState('all');
@@ -117,8 +115,7 @@ export default function DashboardPage() {
         api.get('/inventory/materials/alerts/low-stock'),
         api.get('/production/subcontracting'),
         api.get('/reports/dashboard'),
-        api.get('/workshops'),
-        api.get('/sales/delivery-notes'),
+                api.get('/sales/delivery-notes'),
         api.get('/finance/payments'),
       ]);
 
@@ -127,17 +124,12 @@ export default function DashboardPage() {
       const orders = resOrders.status === 'fulfilled' ? (resOrders.value.data || []) : [];
       const lowStock = resStock.status === 'fulfilled' ? (resStock.value.data || []) : [];
       const subs = resSub.status === 'fulfilled' ? (resSub.value.data || []) : [];
-      const wsList = resWorkshops.status === 'fulfilled' ? (resWorkshops.value.data || []) : [];
-      const deliveries = resDeliveries.status === 'fulfilled' ? (resDeliveries.value.data || []) : [];
+            const deliveries = resDeliveries.status === 'fulfilled' ? (resDeliveries.value.data || []) : [];
       const payments = resPayments.status === 'fulfilled' ? (resPayments.value.data || []) : [];
 
       setLowStockAlerts(lowStock);
       setSubcontracts(subs);
-      setWorkshops(wsList);
-      if (wsList.length > 0 && !selectedWorkshopId) {
-        setSelectedWorkshopId(wsList[0].id);
-      }
-      setDashboardStats(resStats.status === 'fulfilled' ? resStats.value.data : null);
+                  setDashboardStats(resStats.status === 'fulfilled' ? resStats.value.data : null);
 
       // Pending action items specifically for CNC Shop
       const tasks = [];
@@ -527,11 +519,6 @@ export default function DashboardPage() {
           id: 'subcontract',
           label: t('nav.sub_production_subcontract', 'Gia Công Ngoài'),
           desc: t('nav.sub_production_subcontract_desc', 'Gửi tiện, mạ, nhiệt luyện đối tác'),
-        },
-        {
-          id: 'workshops',
-          label: t('nav.sub_production_workshops', 'Phân Xưởng CNC'),
-          desc: t('nav.sub_production_workshops_desc', 'Quản lý danh sách xưởng & dàn máy'),
         },
       ],
     },
@@ -1294,93 +1281,37 @@ export default function DashboardPage() {
                     </span>
                   </div>
 
-                  {workshops.length === 0 ? (
-                    <div className="py-6 text-center text-xs text-slate-400">
-                      Chưa có phân xưởng nào trong cơ sở dữ liệu.
-                      <button
-                        onClick={() => handleNavChange('production', 'workshops')}
-                        className="text-blue-600 font-semibold hover:underline block mx-auto mt-1"
-                      >
-                        + Khởi tạo phân xưởng ngay
-                      </button>
+                  {/* 3 Metrics Boxes */}
+                  <div className="grid grid-cols-3 gap-2.5 my-3">
+                    {/* Box 1: Máy chạy */}
+                    <div className="bg-emerald-50/70 border border-emerald-100 rounded-xl p-2.5 text-center">
+                      <span className="text-[11px] text-emerald-700 font-semibold block">Máy chạy</span>
+                      <span className="text-sm font-bold text-emerald-900 mt-0.5 block">
+                        {dashboardStats ? dashboardStats.production.active_lsx_count : '2'} / 5 máy
+                      </span>
+                      <span className="text-[9px] text-emerald-600 mt-0.5 block">Đang gia công</span>
                     </div>
-                  ) : (
-                    <>
-                      <div className="py-2.5">
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <span className="text-xs text-slate-500 font-medium">Chọn phân xưởng CNC:</span>
-                          <button
-                            onClick={() => handleNavChange('production', 'workshops')}
-                            className="text-[11px] text-blue-600 hover:underline font-semibold"
-                          >
-                            Quản lý xưởng ➔
-                          </button>
-                        </div>
-                        <select
-                          value={selectedWorkshopId || (workshops[0]?.id || '')}
-                          onChange={(e) => setSelectedWorkshopId(Number(e.target.value))}
-                          className="w-full px-3 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                        >
-                          {workshops.map((w) => (
-                            <option key={w.id} value={w.id}>
-                              {w.code} - {w.name} ({w.machine_count} máy | {w.operator_count} thợ)
-                            </option>
-                          ))}
-                        </select>
-                      </div>
 
-                      {(() => {
-                        const currentWs = workshops.find(w => w.id === selectedWorkshopId) || workshops[0];
-                        if (!currentWs) return null;
+                    {/* Box 2: Tỷ lệ Lỗi NG */}
+                    <div className="bg-rose-50/70 border border-rose-100 rounded-xl p-2.5 text-center">
+                      <span className="text-[11px] text-rose-700 font-semibold block">Tỷ lệ NG</span>
+                      <span className="text-sm font-bold text-rose-900 mt-0.5 block">
+                        {dashboardStats ? `${dashboardStats.production.ng_rate_percent}%` : '2%'}
+                      </span>
+                      <span className="text-[9px] text-rose-500 mt-0.5 block">
+                        {dashboardStats ? `${dashboardStats.production.ng_qty} phế phẩm` : '3 lỗi'}
+                      </span>
+                    </div>
 
-                        return (
-                          <>
-                            <div className="p-2.5 bg-slate-50 rounded-xl text-xs space-y-1 mb-2 border border-slate-100">
-                              <div className="flex justify-between text-slate-600">
-                                <span>Quản đốc: <strong className="text-slate-800">{currentWs.manager_name || 'Chưa chỉ định'}</strong></span>
-                                <span className="text-slate-400 font-mono">{currentWs.phone || ''}</span>
-                              </div>
-                              <p className="text-[11px] text-slate-500 truncate" title={currentWs.main_machines}>
-                                Máy chính: {currentWs.main_machines || 'Chưa có thông tin'}
-                              </p>
-                            </div>
-
-                        {/* 3 Metrics Boxes */}
-                        <div className="grid grid-cols-3 gap-2.5 my-3">
-                          {/* Box 1: Máy chạy */}
-                          <div className="bg-emerald-50/70 border border-emerald-100 rounded-xl p-2.5 text-center">
-                            <span className="text-[11px] text-emerald-700 font-semibold block">Máy chạy</span>
-                            <span className="text-sm font-bold text-emerald-900 mt-0.5 block">
-                              {dashboardStats ? dashboardStats.production.active_lsx_count : '2'} / {currentWs.machine_count} máy
-                            </span>
-                            <span className="text-[9px] text-emerald-600 mt-0.5 block">Đang gia công</span>
-                          </div>
-
-                          {/* Box 2: Tỷ lệ Lỗi NG */}
-                          <div className="bg-rose-50/70 border border-rose-100 rounded-xl p-2.5 text-center">
-                            <span className="text-[11px] text-rose-700 font-semibold block">Tỷ lệ NG</span>
-                            <span className="text-sm font-bold text-rose-900 mt-0.5 block">
-                              {dashboardStats ? `${dashboardStats.production.ng_rate_percent}%` : '2%'}
-                            </span>
-                            <span className="text-[9px] text-rose-500 mt-0.5 block">
-                              {dashboardStats ? `${dashboardStats.production.ng_qty} phế phẩm` : '3 lỗi'}
-                            </span>
-                          </div>
-
-                          {/* Box 3: Nhân lực */}
-                          <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-2.5 text-center">
-                            <span className="text-[11px] text-blue-700 font-semibold block">Thợ máy</span>
-                            <span className="text-sm font-bold text-blue-900 mt-0.5 block">
-                              {currentWs.operator_count} thợ
-                            </span>
-                            <span className="text-[9px] text-blue-600 mt-0.5 block">
-                              {currentWs.status === 'active' ? 'Hoạt động' : 'Bảo trì'}
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    );
-                  })()}
+                    {/* Box 3: Nhân lực */}
+                    <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-2.5 text-center">
+                      <span className="text-[11px] text-blue-700 font-semibold block">Thợ máy</span>
+                      <span className="text-sm font-bold text-blue-900 mt-0.5 block">
+                        8 thợ
+                      </span>
+                      <span className="text-[9px] text-blue-600 mt-0.5 block">Hoạt động</span>
+                    </div>
+                  </div>
 
                   {/* Fast Action Buttons */}
                   <div className="grid grid-cols-2 gap-2 mt-4">
@@ -1399,8 +1330,6 @@ export default function DashboardPage() {
                       Xuất phôi / Dao
                     </button>
                   </div>
-                    </>
-                  )}
                 </div>
 
                 {/* Widget 2: Cảnh báo Vật tư thiếu (MRP) & Gia công ngoài */}

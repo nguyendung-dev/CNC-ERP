@@ -239,35 +239,6 @@ async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // 11. Workshops Table (Quản lý phân xưởng CNC thực tế)
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS workshops (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        code VARCHAR(50) NOT NULL UNIQUE,
-        name VARCHAR(150) NOT NULL,
-        manager_name VARCHAR(100),
-        phone VARCHAR(50),
-        machine_count INT DEFAULT 1,
-        operator_count INT DEFAULT 1,
-        main_machines TEXT,
-        location VARCHAR(200),
-        status VARCHAR(50) DEFAULT 'active',
-        description TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
-    // Ensure default workshops exist in database if empty
-    const [existingWorkshops] = await pool.query('SELECT COUNT(*) as count FROM workshops');
-    if (existingWorkshops[0].count === 0) {
-      await pool.query(`
-        INSERT INTO workshops (code, name, manager_name, phone, machine_count, operator_count, main_machines, location, status, description) VALUES
-        ('X-01', 'Xưởng A (Phay Mazak, Tiện Doosan)', 'Lê Văn Sản Xuất', '0918112233', 5, 8, '3 Máy Phay CNC Mazak VCN-530C, 2 Máy Tiện Doosan Lynx 220', 'Khu xưởng 1 - Nhà A', 'active', 'Chuyên gia công chi tiết phay 4 trục và tiện phôi tròn chính xác cao'),
-        ('X-02', 'Xưởng B (Cắt dây EDM & Mài phẳng)', 'Nguyễn Kỹ Thuật', '0988223344', 4, 6, '2 Máy Cắt Dây Sodick AQ327L, 2 Máy Mài Phẳng Okamoto', 'Khu xưởng 2 - Nhà B', 'active', 'Gia công chi tiết khuôn mẫu, rãnh hẹp, dung sai ±0.005mm'),
-        ('X-03', 'Xưởng C (Gia công thô, Cưa phôi & Lắp ráp Jig)', 'Trần Đình Cường', '0905334455', 3, 5, '2 Máy Cưa Vòng Amada HFA, 1 Máy Phay Cơ Vạn Năng', 'Khu nhà xưởng thô', 'active', 'Cắt phôi ban đầu, phay thô phá lượng dư và lắp ráp dưỡng kiểm Jig');
-      `);
-    }
-
     // Check if seed data should be inserted (only if SEED_DEMO=true)
     if (process.env.SEED_DEMO === 'true') {
       const [existingMaterials] = await pool.query('SELECT COUNT(*) as count FROM materials');
